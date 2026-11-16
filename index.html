@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ATS Tutoring | Find Your Tutor</title>
+
+    <meta
+        name="description"
+        content="Find academic support and connect with student tutors in the ATS community."
+    >
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+</head>
+
+<body>
+
+    <header class="navbar">
+        <a href="#" class="brand" onclick="goHome(); return false;">
+    <img
+        class="brand-logo"
+        src="https://www.ats.edu.mx/sys/img/iconos/ATS.png"
+        alt="American School of Tampico logo"
+    >
+    <span>ATS <strong>Tutoring</strong></span>
+</a>
+
+        <button id="sign-out-button" type="button" class="text-button hidden" onclick="signOutUser()">Sign out</button>
+    </header>
+
+    <main id="app">
+
+        <!-- SCREEN 0: HOMEPAGE -->
+
+        <section id="home-screen" class="screen hero-screen active">
+
+            <div class="hero-content">
+
+                <div class="eyebrow">
+                    <span class="status-dot"></span>
+                    YOUR SCHOOL. YOUR COMMUNITY.
+                </div>
+
+                <h1>
+                    A little help.<br>
+                    <span>A lot of progress.</span>
+                </h1>
+
+                <p class="hero-description">
+                    Connect with students who can help you learn,
+                    prepare for exams, and feel more confident in class.
+                </p>
+
+                <div class="hero-actions">
+
+                    <button
+                        class="button button-primary button-large"
+                        onclick="requestFeature('find')"
+                    >
+                        Find a Tutor
+                        <span class="button-arrow">↗</span>
+                    </button>
+
+                    <button
+                        class="button button-secondary button-large"
+                        onclick="requestFeature('signup')"
+                    >
+                        Sign Up as a Tutor
+                        <span>+</span>
+                    </button>
+
+                    <button
+                        class="text-button"
+                        onclick="requestApplicationStatus()"
+                    >
+                    Check my tutor application status →
+                    </button>
+
+                    <button
+                        id="admin-dashboard-link"
+                        class="text-button hidden"
+                        onclick="requestAdminDashboard()"
+                    >
+    Admin dashboard →
+</button>
+
+                </div>
+
+                <div class="hero-note">
+                    <span class="note-icon">✦</span>
+                    Built for the ATS community, by the ATS community.
+                </div>
+
+            </div>
+
+            <div class="hero-visual">
+
+                <div class="visual-glow"></div>
+
+                <div class="visual-card visual-card-main">
+
+                    <div class="visual-card-top">
+                        <span class="mini-label">YOUR NEXT STEP</span>
+                        <span class="visual-icon">✳</span>
+                    </div>
+
+                    <div class="visual-illustration">
+                        <div class="orbit orbit-one"></div>
+                        <div class="orbit orbit-two"></div>
+
+                        <div class="illustration-center">
+                            <span>✦</span>
+                        </div>
+
+                        <div class="floating-symbol symbol-one">+</div>
+                        <div class="floating-symbol symbol-two">∑</div>
+                        <div class="floating-symbol symbol-three">π</div>
+                    </div>
+
+                    <h3>Learning, together.</h3>
+
+                    <p>
+                        Find the right support for the subjects
+                        that matter to you.
+                    </p>
+
+                    <div class="visual-card-footer">
+                        <span>EXPLORE YOUR OPTIONS</span>
+                        <span>→</span>
+                    </div>
+
+                </div>
+
+                <div class="floating-card floating-card-top">
+                    <span class="floating-card-icon">✓</span>
+                    <div>
+                        <strong>Your goals, supported.</strong>
+                        <small>One subject at a time</small>
+                    </div>
+                </div>
+
+                <div class="floating-card floating-card-bottom">
+                    <span class="floating-card-icon red-icon">✦</span>
+                    <div>
+                        <strong>Student-powered</strong>
+                        <small>Academic collaboration</small>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+<!-- APPLICATION STATUS SCREEN -->
+
+<section id="application-status-screen" class="screen form-screen">
+
+    <button class="back-button" onclick="goHome()">
+        ← Back to home
+    </button>
+
+    <div class="form-container">
+
+        <div class="step-label">TUTOR APPLICATION</div>
+
+        <h2>Your application status</h2>
+
+        <p class="section-description">
+            Keep track of your tutor application and its approval progress.
+        </p>
+
+        <div id="application-status-content">
+            Loading your applications...
+        </div>
+
+        <button
+            class="button button-secondary button-full"
+            onclick="loadMyApplications()"
+        >
+            Refresh status
+        </button>
+
+    </div>
+
+</section>
+
+<!-- ADMIN DASHBOARD SCREEN -->
+
+<section id="admin-dashboard-screen" class="screen form-screen">
+
+    <button class="back-button" onclick="goHome()">
+        ← Back to home
+    </button>
+
+    <div class="form-container">
+
+        <div class="step-label">ATS TUTORING · ADMINISTRATION</div>
+
+        <h2>Tutor applications</h2>
+
+        <p class="section-description">
+            Review student applications and their requested tutoring subjects.
+        </p>
+
+        <button
+            class="button button-secondary button-full"
+            onclick="loadAdminApplications()"
+        >
+            Refresh applications ↻
+        </button>
+
+        <div id="admin-applications-content">
+            Loading applications...
+        </div>
+
+        <div id="admin-application-detail" class="hidden"></div>
+
+    </div>
+
+</section>
+
+ <!-- SCREEN: ATS GOOGLE SIGN-IN -->
+
+<section id="auth-screen" class="screen form-screen">
+
+    <button class="back-button" onclick="goHome()">
+        ← Back to home
+    </button>
+
+    <div class="form-container">
+
+        <div class="step-label">ATS COMMUNITY ACCESS</div>
+
+        <h2>Welcome to ATS Tutoring!</h2>
+
+        <p class="section-description">
+            To access the tutoring directory, please sign in
+            using your ATS Google account.
+        </p>
+
+        <div class="auth-message">
+            <p>
+                ✦ This platform is exclusively for the ATS
+                community. Using your school account helps
+                us create a safer environment for students
+                and tutors.
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="button button-primary button-full"
+            onclick="signInWithGoogle()"
+        >
+            Sign in with Google
+            <span>→</span>
+        </button>
+
+        <p class="input-hint">
+            Only accounts ending in @ats.edu.mx are accepted.
+        </p>
+
+    </div>
+
+</section>
+
+        <!-- SCREEN 1: CHOOSE A SUBJECT -->
+
+        <section id="subject-screen" class="screen form-screen">
+
+            <button class="back-button" onclick="goHome()">
+                ← Back to home
+            </button>
+
+            <div class="form-container">
+
+                <div class="step-label">LET'S GET STARTED · 01</div>
+
+                <h2>Hello! What subject do you need help in?</h2>
+
+                <p class="section-description">
+                    Choose a subject and we'll help you find
+                    students who can support you.
+                </p>
+
+                <form id="subject-form">
+
+                    <label for="subject-select">Choose your subject</label>
+
+                    <select id="subject-select" required>
+                        <option value="">Select a subject...</option>
+                    </select>
+
+                    <p class="input-hint">
+                        Don't see your subject? Let us know so we can
+                        add it to the directory.
+                    </p>
+
+                    <button
+                        type="submit"
+                        class="button button-primary button-full"
+                    >
+                        Find Tutors <span>→</span>
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+        <!-- SCREEN 2: STUDENT NAME -->
+
+        <section id="name-screen" class="screen form-screen">
+
+            <button class="back-button" onclick="showScreen('subject-screen')">
+                ← Back to subjects
+            </button>
+
+            <div class="form-container">
+
+                <div class="step-label">ALMOST THERE · 02</div>
+
+                <h2>First, what should we call you?</h2>
+
+                <p class="section-description">
+                    We'll use your first name to personalize your
+                    tutoring experience.
+                </p>
+
+                <form id="name-form">
+
+                    <label for="student-name">Your first name</label>
+
+                    <input
+                        id="student-name"
+                        type="text"
+                        placeholder="Enter your first name"
+                        maxlength="50"
+                        autocomplete="given-name"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="button button-primary button-full"
+                    >
+                        Show Me My Tutors <span>→</span>
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+        <!-- SCREEN 3: TUTOR RESULTS -->
+
+        <section id="results-screen" class="screen results-screen">
+
+            <button class="back-button" onclick="showScreen('name-screen')">
+                ← Back
+            </button>
+
+            <div class="results-heading">
+
+                <div class="step-label">YOUR MATCHES · 03</div>
+
+                <h2 id="results-title">Let's find your tutor.</h2>
+
+                <p class="section-description" id="results-description">
+                    Here are the tutors available for your subject.
+                </p>
+
+                <button
+                    class="text-button"
+                    onclick="showScreen('subject-screen')"
+                >
+                    Change subject ↗
+                </button>
+
+            </div>
+
+            <div id="tutor-grid" class="tutor-grid"></div>
+
+            <div id="no-tutors" class="empty-state hidden">
+
+                <div class="empty-icon">✳</div>
+
+                <h3>No tutors available just yet.</h3>
+
+                <p>
+                    We're sorry! We couldn't find any tutors for this
+                    subject right now. Please try another subject or
+                    check back later.
+                </p>
+
+                <button
+                    class="button button-secondary"
+                    onclick="showScreen('subject-screen')"
+                >
+                    Explore Other Subjects
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- SCREEN 4: TUTOR PROFILE -->
+
+        <section id="profile-screen" class="screen profile-screen">
+
+            <button class="back-button" onclick="showScreen('results-screen')">
+                ← Back to tutors
+            </button>
+
+            <div id="tutor-profile"></div>
+
+        </section>
+
+
+        <!-- TUTOR SIGN-UP: REGISTRATION FORM -->
+
+        
+<section id="signup-screen" class="screen signup-screen">
+
+    <button class="back-button" onclick="goHome()">
+        ← Back to home
+    </button>
+
+    <div class="signup-layout">
+
+        <!-- INTRODUCTION / PROGRESS -->
+
+        <aside class="signup-sidebar">
+
+            <div class="step-label">BECOME A TUTOR</div>
+
+            <h2>
+                Share what you know.
+                <span>Make a difference.</span>
+            </h2>
+
+            <p>
+                Your knowledge can make someone's school experience
+                a little easier. Tell us about yourself and the
+                subjects you'd love to help with.
+            </p>
+
+            <div class="signup-benefits">
+
+                <div class="signup-benefit">
+                    <span class="benefit-icon">✦</span>
+                    <div>
+                        <strong>Share your strengths</strong>
+                        <small>Help others learn what you know.</small>
+                    </div>
+                </div>
+
+                <div class="signup-benefit">
+                    <span class="benefit-icon">◷</span>
+                    <div>
+                        <strong>Choose your schedule</strong>
+                        <small>Offer times that work for you.</small>
+                    </div>
+                </div>
+
+                <div class="signup-benefit">
+                    <span class="benefit-icon">♡</span>
+                    <div>
+                        <strong>Support your community</strong>
+                        <small>Make academic help more accessible.</small>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="signup-sidebar-note">
+                <span>✳</span>
+                Every student has something valuable to teach.
+            </div>
+
+        </aside>
+
+
+        <!-- FORM AREA -->
+
+        <div class="signup-main">
+
+            <div class="signup-form-heading">
+
+                <div>
+                    <div class="step-label" id="signup-step-label">
+                        STEP 01 OF 03
+                    </div>
+
+                    <h3 id="signup-step-title">
+                        Let's get to know you.
+                    </h3>
+
+                    <p id="signup-step-description">
+                        Start with a few basic details.
+                    </p>
+                </div>
+
+                <span class="signup-step-number" id="signup-step-number">
+                    01
+                </span>
+
+            </div>
+
+
+            <!-- PROGRESS BAR -->
+
+            <div class="signup-progress-track">
+                <div
+                    id="signup-progress-bar"
+                    class="signup-progress-bar"
+                ></div>
+            </div>
+
+
+            <form id="tutor-registration-form">
+
+                <!-- STEP 1: PERSONAL INFORMATION -->
+
+                <div class="signup-step active" data-step="1">
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+                            <label for="tutor-first-name">
+                                First name <span>*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                id="tutor-first-name"
+                                name="firstName"
+                                placeholder="e.g. Alex"
+                                autocomplete="given-name"
+                                maxlength="50"
+                                required
+                            >
+                        </div>
+
+
+                        <div class="form-field">
+                            <label for="tutor-last-name">
+                                Last name <span>*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                id="tutor-last-name"
+                                name="lastName"
+                                placeholder="e.g. Rivera"
+                                autocomplete="family-name"
+                                maxlength="70"
+                                required
+                            >
+                        </div>
+
+
+                        <div class="form-field">
+                            <label for="tutor-grade">
+                                Current grade <span>*</span>
+                            </label>
+
+                            <select id="tutor-grade" name="grade" required>
+                                <option value="">Select your grade</option>
+                                <option value="9">Grade 9</option>
+                                <option value="10">Grade 10</option>
+                                <option value="11">Grade 11</option>
+                                <option value="12">Grade 12</option>
+                            </select>
+                        </div>
+
+
+
+                    </div>
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-field">
+                        <label for="tutor-bio">
+                            Tell us about yourself <span>*</span>
+                        </label>
+
+                        <textarea
+                            id="tutor-bio"
+                            name="bio"
+                            rows="5"
+                            maxlength="700"
+                            placeholder="Tell us a little bit about you and your expertise on the topics you chose. Your time to brag a little!"
+                            required
+                        ></textarea>
+
+                        <div class="textarea-footer">
+                            <small>
+                                Share your experience, strengths,
+                                and how you like to help others learn.
+                            </small>
+
+                            <span>
+                                <span id="bio-character-count">0</span>/700
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <!-- STEP 2: SUBJECTS AND TUTORING PREFERENCES -->
+
+                <div class="signup-step" data-step="2">
+
+                    <div class="form-field">
+
+                        <label for="tutor-subject-search">
+                            Which subjects can you tutor? <span>*</span>
+                        </label>
+
+                        <p class="field-description">
+                            Select as many subjects as you'd like.
+                        </p>
+
+                        <input
+                            type="search"
+                            id="tutor-subject-search"
+                            placeholder="Search subjects..."
+                            autocomplete="off"
+                        >
+
+                        <div
+                            id="tutor-subject-options"
+                            class="subject-options"
+                            aria-label="Available tutoring subjects"
+                        ></div>
+
+                        <div class="selected-subjects-heading">
+                            <span>YOUR SUBJECTS</span>
+                            <span id="selected-subject-count">0 selected</span>
+                        </div>
+
+                        <div
+                            id="selected-subjects"
+                            class="selected-subjects"
+                        ></div>
+
+                        <p
+                            id="subject-selection-error"
+                            class="field-error hidden"
+                        >
+                            Please select at least one subject.
+                        </p>
+
+                    </div>
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-field">
+
+                        <label>
+                            How would you like to tutor? <span>*</span>
+                        </label>
+
+                        <p class="field-description">
+                            Choose all the formats you're comfortable with.
+                        </p>
+
+                        <div class="choice-grid">
+
+                            <label class="choice-card">
+
+                                <input
+                                    type="checkbox"
+                                    name="format"
+                                    value="In person"
+                                >
+
+                                <span class="choice-card-content">
+                                    <span class="choice-icon">⌂</span>
+                                    <strong>In person</strong>
+                                    <small>Meet face-to-face</small>
+                                </span>
+
+                            </label>
+
+
+                            <label class="choice-card">
+
+                                <input
+                                    type="checkbox"
+                                    name="format"
+                                    value="Online"
+                                >
+
+                                <span class="choice-card-content">
+                                    <span class="choice-icon">↗</span>
+                                    <strong>Online</strong>
+                                    <small>Meet virtually</small>
+                                </span>
+
+                            </label>
+
+                        </div>
+
+                        <p
+                            id="format-selection-error"
+                            class="field-error hidden"
+                        >
+                            Please select at least one tutoring format.
+                        </p>
+
+                    </div>
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-field">
+
+                        <label>
+                            Would you charge for tutoring? <span>*</span>
+                        </label>
+
+                        <div class="rate-options">
+
+                            <label class="rate-option">
+
+                                <input
+                                    type="radio"
+                                    name="rateType"
+                                    value="free"
+                                    checked
+                                >
+
+                                <span>
+                                    <strong>Free tutoring</strong>
+                                    <small>Help fellow students at no cost.</small>
+                                </span>
+
+                            </label>
+
+
+                            <label class="rate-option">
+
+                                <input
+                                    type="radio"
+                                    name="rateType"
+                                    value="paid"
+                                >
+
+                                <span>
+                                    <strong>Paid tutoring</strong>
+                                    <small>Set your hourly rate.</small>
+                                </span>
+
+                            </label>
+
+                        </div>
+
+                        <div id="hourly-rate-container" class="hidden">
+
+                            <label for="tutor-hourly-rate">
+                                Hourly rate (MXN)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="tutor-hourly-rate"
+                                name="hourlyRate"
+                                min="1"
+                                max="10000"
+                                step="1"
+                                placeholder="e.g. 150"
+                            >
+
+                            <p class="input-hint">
+                                Enter the amount you would charge
+                                per hour in Mexican pesos.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- STEP 3: AVAILABILITY AND SESSION SIZE -->
+
+                <div class="signup-step" data-step="3">
+
+                    <div class="form-field">
+
+                        <label>
+                            When are you available? <span>*</span>
+                        </label>
+
+                        <p class="field-description">
+                            Select the days and time slots when
+                            you'd be willing to tutor.
+                        </p>
+
+
+                        <div class="availability-builder">
+
+                            <div
+                                id="availability-days"
+                                class="availability-days"
+                            ></div>
+
+
+                            <div class="availability-time-heading">
+
+                                <div>
+                                    <strong id="availability-day-title">
+                                        Select a day
+                                    </strong>
+
+                                    <p>
+                                        Choose one or more available times.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    id="select-all-times"
+                                    class="text-button"
+                                >
+                                    Select all
+                                </button>
+
+                            </div>
+
+
+                            <div
+                                id="availability-times"
+                                class="availability-times"
+                            ></div>
+
+
+                            <div class="availability-summary">
+
+                                <span class="summary-icon">✓</span>
+
+                                <div>
+                                    <strong>Your availability</strong>
+
+                                    <p id="availability-summary-text">
+                                        No time slots selected yet.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <p
+                            id="availability-selection-error"
+                            class="field-error hidden"
+                        >
+                            Please select at least one available time slot.
+                        </p>
+
+                    </div>
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-field">
+
+                        <label for="tutor-max-students">
+                            Maximum students per session <span>*</span>
+                        </label>
+
+                        <p class="field-description">
+                            How many students can you comfortably
+                            help at the same time?
+                        </p>
+
+                        <div class="capacity-control">
+
+                            <button
+                                type="button"
+                                id="capacity-decrease"
+                                class="capacity-button"
+                                aria-label="Decrease maximum students"
+                            >
+                                −
+                            </button>
+
+                            <div class="capacity-value">
+                                <input
+                                    type="number"
+                                    id="tutor-max-students"
+                                    name="maxStudents"
+                                    value="1"
+                                    min="1"
+                                    max="50"
+                                    required
+                                >
+
+                                <span>students per session</span>
+                            </div>
+
+                            <button
+                                type="button"
+                                id="capacity-increase"
+                                class="capacity-button"
+                                aria-label="Increase maximum students"
+                            >
+                                +
+                            </button>
+
+                        </div>
+
+                        <p class="input-hint">
+                            You can choose any number from 1 to 50.
+                        </p>
+
+                    </div>
+
+
+                    <div class="form-divider"></div>
+
+
+
+                    <div class="form-field">
+                        <label class="checkbox-consent">
+                            <input type="checkbox" id="tutor-share-email" required>
+                            <span>
+                                If approved, I agree to share my tutor profile and school email
+                                with signed-in ATS students so they can contact me about tutoring.
+                                <strong>*</strong>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-field">
+
+                        <label class="checkbox-consent">
+
+                            <input
+                                type="checkbox"
+                                id="tutor-guidelines"
+                                name="guidelines"
+                                required
+                            >
+
+                            <span>
+                                I understand that tutor profiles should
+                                be accurate, respectful, and appropriate
+                                for the school community. <strong>*</strong>
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FORM NAVIGATION -->
+
+                <div class="signup-form-footer">
+
+                    <button
+                        type="button"
+                        id="signup-back-button"
+                        class="button button-secondary"
+                    >
+                        ← Back
+                    </button>
+
+                    <button
+                        type="button"
+                        id="signup-next-button"
+                        class="button button-primary"
+                    >
+                        Continue <span>→</span>
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="signup-submit-button"
+                        class="button button-primary hidden"
+                    >
+                        Preview Registration ✓
+                    </button>
+
+                </div>
+
+
+                <p class="signup-demo-note">
+                    <span>ⓘ</span>
+                    You can review your details before submitting them for approval.
+                </p>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- REGISTRATION REVIEW SCREEN -->
+
+<section id="signup-review-screen" class="screen signup-review-screen">
+
+    <button
+        class="back-button"
+        onclick="showScreen('signup-screen')"
+    >
+        ← Back to registration
+    </button>
+
+    <div class="review-container">
+
+        <div class="review-success-icon">✓</div>
+
+        <div class="step-label">REGISTRATION PREVIEW</div>
+
+        <h2>Looking good!</h2>
+
+        <p class="section-description">
+            Here's how your tutor information could appear
+            once your profile is approved.
+        </p>
+
+
+        <div id="registration-review-card" class="registration-review-card">
+        </div>
+
+
+        <div class="review-notice">
+            <span>ⓘ</span>
+
+            <p>
+                Submit your application when you’re ready. The reviewer will decide which subjects you can offer.
+            </p>
+        </div>
+
+
+        <div class="review-actions">
+
+            <button
+                class="button button-secondary"
+                onclick="showScreen('signup-screen')"
+            >
+                Edit Information
+            </button>
+
+            <button
+                class="button button-primary"
+                id="submit-application-button"
+                onclick="submitRegistration()"
+            >
+                Submit application
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+    </main>
+
+    <footer class="footer">
+        <span>ATS TUTORING</span>
+        <span>Supporting our community, one student at a time.</span>
+    </footer>
+
+    <script type="module" src="firebase.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
