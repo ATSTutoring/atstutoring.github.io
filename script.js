@@ -189,7 +189,7 @@ window.handleAuthStateChanged = function(user) {
         adminApplications = [];
         adminLoadVersion++;
         for (const id of ["tutor-grid", "tutor-profile", "application-status-content",
-            "admin-applications-content", "admin-application-detail", "admin-tutors-content",
+            "admin-applications-content", "admin-tutors-content",
             "admin-dashboard-feedback", "admin-tutors-feedback"]) {
             document.getElementById(id).replaceChildren();
         }
@@ -1757,12 +1757,8 @@ async function loadAdminApplications(message = "") {
     const version = ++adminLoadVersion;
     const user = window.currentUser;
     const container = document.getElementById("admin-applications-content");
-    const detail = document.getElementById("admin-application-detail");
     const feedback = document.getElementById("admin-dashboard-feedback");
-    document.getElementById("admin-review-layout").classList.remove("has-open-application");
     container.textContent = "Loading applications...";
-    detail.replaceChildren();
-    detail.classList.add("hidden");
     feedback.textContent = message;
     showScreen("admin-dashboard-screen");
 
@@ -1788,14 +1784,20 @@ async function loadAdminApplications(message = "") {
         adminApplications.forEach(application => {
             const card = document.createElement("article");
             card.className = "profile-card admin-application-card";
+            card.dataset.applicationId = application.id;
             card.innerHTML = `
-                <h3>${escapeHTML(application.firstName)} ${escapeHTML(application.lastName)}</h3>
-                <p>Grade ${escapeHTML(application.grade)}</p>
-                <p class="application-status">Awaiting approval</p>
-                <p>${escapeHTML((application.subjects || []).join(", "))}</p>
-                <button type="button" class="button button-secondary">Review application</button>
+                <div class="admin-review-heading">
+                    <div>
+                        <h2>${escapeHTML(application.firstName)} ${escapeHTML(application.lastName)}</h2>
+                        <p>Grade ${escapeHTML(application.grade)}</p>
+                    </div>
+                    <p class="application-status">Awaiting approval</p>
+                </div>
+                <button type="button" class="button button-secondary admin-review-toggle"
+                    aria-expanded="false" aria-controls="application-review-${escapeHTML(application.id)}">Review application</button>
+                <div id="application-review-${escapeHTML(application.id)}" class="admin-application-detail hidden"></div>
             `;
-            card.querySelector("button").addEventListener("click", () => openAdminApplication(application.id));
+            card.querySelector(".admin-review-toggle").addEventListener("click", () => openAdminApplication(application.id, card));
             container.appendChild(card);
         });
     } catch (error) {
@@ -1805,13 +1807,24 @@ async function loadAdminApplications(message = "") {
     }
 }
 
-function openAdminApplication(applicationId) {
+function openAdminApplication(applicationId, card) {
     if (!window.isAdminUser?.()) return;
     const application = adminApplications.find(item => item.id === applicationId);
     if (!application || application.status !== "pending") return;
 
+    const detail = card.querySelector(".admin-application-detail");
+    const reviewButton = card.querySelector(".admin-review-toggle");
+    function setExpanded(expanded) {
+        detail.classList.toggle("hidden", !expanded);
+        reviewButton.setAttribute("aria-expanded", expanded);
+        reviewButton.textContent = expanded ? "Hide application" : "Review application";
+    }
+    if (detail.childElementCount) {
+        setExpanded(detail.classList.contains("hidden"));
+        return;
+    }
+
     const name = `${application.firstName} ${application.lastName}`;
-    const detail = document.getElementById("admin-application-detail");
     const subjects = application.subjects || [];
     const availability = Object.entries(application.availability || {})
         .filter(([, times]) => Array.isArray(times) && times.length > 0)
@@ -1822,14 +1835,6 @@ function openAdminApplication(applicationId) {
         ? `MXN $${escapeHTML(application.hourlyRate)} per hour` : "Free tutoring";
 
     detail.innerHTML = `
-        <article class="profile-card admin-review-card">
-            <div class="admin-review-heading">
-            <div>
-            <h2>${escapeHTML(name)}</h2>
-            <p>Grade ${escapeHTML(application.grade)}</p>
-            </div>
-            <p class="application-status">Awaiting approval</p>
-            </div>
             <p class="admin-subject-intro">${escapeHTML(name)} is requesting being a tutor for the following subjects:</p>
             <div class="subject-tags">${subjects.map(subject => `<span class="subject-tag">${escapeHTML(subject)}</span>`).join("")}</div>
             <div class="admin-decision-actions">
@@ -1866,7 +1871,6 @@ function openAdminApplication(applicationId) {
                 </div>
             </details>
             <button type="button" class="text-button admin-close-review">Close application</button>
-        </article>
     `;
 
     let saving = false;
@@ -1902,14 +1906,11 @@ function openAdminApplication(applicationId) {
         saveDecision(Object.fromEntries([...detail.querySelectorAll("[data-subject]")]
             .map(select => [select.dataset.subject, select.value])));
     });
-    const layout = document.getElementById("admin-review-layout");
     detail.querySelector(".admin-close-review").addEventListener("click", () => {
-        detail.classList.add("hidden");
-        layout.classList.remove("has-open-application");
+        setExpanded(false);
+        reviewButton.focus();
     });
-    layout.classList.add("has-open-application");
-    detail.classList.remove("hidden");
-    detail.scrollIntoView({ behavior: "smooth", block: "start" });
+    setExpanded(true);
 }
 
 async function loadExistingTutors(message = "") {
