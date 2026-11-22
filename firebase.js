@@ -91,6 +91,18 @@ window.submitTutorApplication = async function (applicationData) {
     if (!Object.keys(availability).length) {
         throw new Error("Select at least one available time.");
     }
+    const contactMethod = applicationData.contactMethod || "";
+    if (!["", "School email", "Phone number"].includes(contactMethod)) {
+        throw new Error("Choose a valid contact method.");
+    }
+    const contactConsent = Boolean(contactMethod) && (applicationData.contactConsent === true
+        || (contactMethod === "School email" && applicationData.shareSchoolEmail === true));
+    const contactPhone = contactMethod === "Phone number"
+        ? (applicationData.contactPhone || "").trim() : null;
+    if (contactMethod && !contactConsent) throw new Error("Confirm that you agree to share your contact details.");
+    if (contactMethod === "Phone number" && !/^\+?[0-9]{7,15}$/.test(contactPhone)) {
+        throw new Error("Enter a valid phone number.");
+    }
 
     return runTransaction(db, async transaction => {
         const existing = await transaction.get(applicationRef);
@@ -104,6 +116,10 @@ window.submitTutorApplication = async function (applicationData) {
         transaction.set(applicationRef, {
             ...applicationData,
             availability,
+            contactMethod,
+            contactPhone,
+            contactConsent,
+            shareSchoolEmail: contactMethod === "School email" && contactConsent,
             userId: user.uid,
             applicantEmail: user.email.toLowerCase(),
             status: "pending",
@@ -206,8 +222,12 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
             availability: Object.fromEntries(Object.entries(application.availability || {})
                 .filter(([, times]) => Array.isArray(times) && times.length > 0)),
             maxStudents: application.maxStudents ?? null,
-            contactMethod: application.contactMethod || "School email",
-            contactEmail: application.shareSchoolEmail === true ? application.applicantEmail : null
+            contactMethod: application.contactMethod || "",
+            contactEmail: application.shareSchoolEmail === true ? application.applicantEmail : null,
+            contactPhone: application.contactMethod === "Phone number"
+                && application.contactConsent === true
+                && /^\+?[0-9]{7,15}$/.test(application.contactPhone || "")
+                    ? application.contactPhone : null
         });
     });
 };

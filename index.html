@@ -965,13 +965,25 @@
 
 
                     <div class="form-field">
+                        <label for="tutor-contact">Contact details <span class="optional-label">Optional</span></label>
+                        <select id="tutor-contact" name="contactMethod">
+                            <option value="">Leave blank for now</option>
+                            <option value="School email">Use my school email</option>
+                            <option value="Phone number">Phone number</option>
+                        </select>
+                        <p id="tutor-contact-hint" class="input-hint">You can apply without adding contact details.</p>
+                    </div>
+
+                    <div id="tutor-phone-field" class="form-field hidden">
+                        <label for="tutor-phone">Phone number</label>
+                        <input id="tutor-phone" name="contactPhone" type="tel" autocomplete="tel"
+                            maxlength="30" placeholder="e.g. +52 833 123 4567" disabled>
+                    </div>
+
+                    <div id="tutor-contact-consent" class="form-field hidden">
                         <label class="checkbox-consent">
-                            <input type="checkbox" id="tutor-share-email" required>
-                            <span>
-                                If approved, I agree to share my tutor profile and school email
-                                with signed-in ATS students so they can contact me about tutoring.
-                                <strong>*</strong>
-                            </span>
+                            <input type="checkbox" id="tutor-share-contact" disabled>
+                            <span>I agree to show these contact details to signed-in ATS students if my tutor profile is approved.</span>
                         </label>
                     </div>
 
@@ -992,7 +1004,8 @@
                             <span>
                                 I understand that tutor profiles should
                                 be accurate, respectful, and appropriate
-                                for the school community. <strong>*</strong>
+                                for the school community, and that my approved profile
+                                will be visible to signed-in ATS students. <strong>*</strong>
                             </span>
 
                         </label>

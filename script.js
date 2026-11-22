@@ -482,11 +482,13 @@ function openTutorProfile(tutor, manageTutors = false) {
             </div>
         `).join("");
 
-    let contact = "<p>This tutor hasn’t shared a school email.</p>";
+    let contact = "<p>This tutor hasn’t added contact details yet.</p>";
     if (/^[^@\s]+@ats\.edu\.mx$/i.test(tutor.contactEmail || "")) {
         const address = encodeURIComponent(tutor.contactEmail).replace("%40", "@");
         const subject = encodeURIComponent("ATS tutoring request for " + selectedSubject);
         contact = `<a class="button button-primary" href="mailto:${address}?subject=${subject}">Email tutor</a>`;
+    } else if (/^\+?[0-9]{7,15}$/.test(tutor.contactPhone || "")) {
+        contact = `<a class="button button-primary" href="tel:${escapeHTML(tutor.contactPhone)}">Call ${escapeHTML(tutor.contactPhone)}</a>`;
     }
 
     profile.innerHTML = `
@@ -709,6 +711,7 @@ function updateSignupStep() {
 function resetTutorRegistration() {
 
     document.getElementById("tutor-registration-form").reset();
+    updateTutorContact();
 
     signupStep = 1;
 
@@ -1121,6 +1124,44 @@ function validateTutorAvailability() {
     return isValid;
 }
 
+function updateTutorContact() {
+    const method = document.getElementById("tutor-contact").value;
+    const phone = document.getElementById("tutor-phone");
+    const consent = document.getElementById("tutor-share-contact");
+    document.getElementById("tutor-phone-field").classList.toggle("hidden", method !== "Phone number");
+    document.getElementById("tutor-contact-consent").classList.toggle("hidden", !method);
+    phone.disabled = method !== "Phone number";
+    phone.required = method === "Phone number";
+    phone.setCustomValidity("");
+    consent.disabled = !method;
+    consent.required = Boolean(method);
+    consent.checked = false;
+    document.getElementById("tutor-contact-hint").textContent = method === "School email"
+        ? `Your school email will be ${window.currentUser?.email || "your signed-in ATS address"}.`
+        : method === "Phone number"
+            ? "Include a country code if needed. These details will be visible to signed-in ATS students."
+            : "You can apply without adding contact details.";
+}
+
+function validateTutorContact() {
+    const method = document.getElementById("tutor-contact").value;
+    if (!method) return true;
+    const phone = document.getElementById("tutor-phone");
+    phone.setCustomValidity("");
+    if (method === "Phone number") {
+        const value = phone.value.trim();
+        const digits = value.replace(/[^0-9]/g, "");
+        if (!/^\+?[0-9\s().-]+$/.test(value) || digits.length < 7 || digits.length > 15) {
+            phone.setCustomValidity("Enter a phone number with 7 to 15 digits, including a country code if needed.");
+        }
+        if (!phone.reportValidity()) return false;
+    }
+    return document.getElementById("tutor-share-contact").reportValidity();
+}
+
+document.getElementById("tutor-contact").addEventListener("change", updateTutorContact);
+document.getElementById("tutor-phone").addEventListener("input", event => event.target.setCustomValidity(""));
+
 
 /*
     SESSION CAPACITY COUNTER
@@ -1286,7 +1327,7 @@ function validateSignupStep() {
 
         const validAvailability = validateTutorAvailability();
 
-        if (!validAvailability) {
+        if (!validAvailability || !validateTutorContact()) {
             return false;
         }
 
@@ -1500,7 +1541,10 @@ function renderRegistrationReview() {
         <div class="review-detail">
 
             <h4>Contact</h4>
-            <p>School email</p>
+            <p>${escapeHTML(document.getElementById("tutor-contact").value === "School email"
+                ? window.currentUser?.email
+                : document.getElementById("tutor-contact").value === "Phone number"
+                    ? document.getElementById("tutor-phone").value.trim() : "Not provided")}</p>
 
         </div>
 
@@ -1520,6 +1564,7 @@ async function submitRegistration() {
         alert("Please sign in before submitting your application.");
         return;
     }
+    if (!validateTutorContact()) return;
 
     const firstName = document
         .getElementById("tutor-first-name")
@@ -1567,13 +1612,18 @@ async function submitRegistration() {
 
         maxStudents: Number(capacityInput.value),
 
-        contactMethod: "School email",
-        shareSchoolEmail: document.getElementById("tutor-share-email").checked
+        contactMethod: document.getElementById("tutor-contact").value,
+        contactPhone: document.getElementById("tutor-contact").value === "Phone number"
+            ? document.getElementById("tutor-phone").value.trim().replace(/[^+0-9]/g, "") : null,
+        contactConsent: document.getElementById("tutor-contact").value
+            ? document.getElementById("tutor-share-contact").checked : false,
+        shareSchoolEmail: document.getElementById("tutor-contact").value === "School email"
+            && document.getElementById("tutor-share-contact").checked
 
     };
 
     const button = document.getElementById("submit-application-button");
-    if (button.disabled || !applicationData.shareSchoolEmail) return;
+    if (button.disabled) return;
 
     try {
 
@@ -1853,6 +1903,8 @@ function openAdminApplication(applicationId, card) {
                 <div class="review-detail admin-metadata-wide"><h4>Availability</h4>${availability || "<p>Not provided.</p>"}</div>
                 <div class="review-detail"><h4>Maximum students per session</h4><p>${escapeHTML(application.maxStudents ?? "Not provided")}</p></div>
                 <div class="review-detail"><h4>Preferred contact method</h4><p>${escapeHTML(application.contactMethod || "Not provided")}</p></div>
+                ${application.contactMethod === "Phone number"
+                    ? `<div class="review-detail"><h4>Contact phone</h4><p>${escapeHTML(application.contactPhone || "Not provided")}</p></div>` : ""}
                 </div>
                 <form class="admin-subject-decisions">
                     <h4>Decide by subject</h4>
