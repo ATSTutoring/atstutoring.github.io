@@ -936,32 +936,30 @@ function renderAvailabilityDays() {
     availabilityDays.forEach(day => {
 
         const button = document.createElement("button");
+        const hasSelectedTimes = (tutorAvailability[day]?.size || 0) > 0;
 
         button.type = "button";
 
         button.className =
             "day-button" +
-            (tutorAvailability[day] ? " selected" : "");
+            (hasSelectedTimes ? " selected" : "") +
+            (activeAvailabilityDay === day ? " viewing" : "");
 
         button.textContent = day.slice(0, 3);
 
         button.setAttribute(
             "aria-pressed",
-            Boolean(tutorAvailability[day])
+            hasSelectedTimes
         );
 
         button.setAttribute(
             "aria-label",
-            `${day}${tutorAvailability[day] ? ", selected" : ""}`
+            `${day}${hasSelectedTimes ? ", times selected" : ""}${activeAvailabilityDay === day ? ", viewing" : ""}`
         );
 
         button.addEventListener("click", () => {
 
             activeAvailabilityDay = day;
-
-            if (!tutorAvailability[day]) {
-                tutorAvailability[day] = new Set();
-            }
 
             renderAvailabilityDays();
 
@@ -1540,7 +1538,7 @@ async function submitRegistration() {
     ].map(input => input.value);
 
     const availability = Object.fromEntries(
-        Object.entries(tutorAvailability).map(([day, times]) => [
+        Object.entries(tutorAvailability).filter(([, times]) => times.size > 0).map(([day, times]) => [
             day,
             [...times]
         ])
@@ -1761,6 +1759,7 @@ async function loadAdminApplications(message = "") {
     const container = document.getElementById("admin-applications-content");
     const detail = document.getElementById("admin-application-detail");
     const feedback = document.getElementById("admin-dashboard-feedback");
+    document.getElementById("admin-review-layout").classList.remove("has-open-application");
     container.textContent = "Loading applications...";
     detail.replaceChildren();
     detail.classList.add("hidden");
@@ -1814,18 +1813,23 @@ function openAdminApplication(applicationId) {
     const name = `${application.firstName} ${application.lastName}`;
     const detail = document.getElementById("admin-application-detail");
     const subjects = application.subjects || [];
-    const availability = Object.entries(application.availability || {}).map(([day, times]) => `
-        <p><strong>${escapeHTML(day)}</strong> ${escapeHTML(Array.isArray(times) ? times.join(", ") : "")}</p>
+    const availability = Object.entries(application.availability || {})
+        .filter(([, times]) => Array.isArray(times) && times.length > 0)
+        .map(([day, times]) => `
+        <p><strong>${escapeHTML(day)}</strong> ${escapeHTML(times.join(", "))}</p>
     `).join("");
     const rate = application.rateType === "paid"
         ? `MXN $${escapeHTML(application.hourlyRate)} per hour` : "Free tutoring";
 
     detail.innerHTML = `
-        <div class="form-divider"></div>
         <article class="profile-card admin-review-card">
+            <div class="admin-review-heading">
+            <div>
             <h2>${escapeHTML(name)}</h2>
             <p>Grade ${escapeHTML(application.grade)}</p>
+            </div>
             <p class="application-status">Awaiting approval</p>
+            </div>
             <p class="admin-subject-intro">${escapeHTML(name)} is requesting being a tutor for the following subjects:</p>
             <div class="subject-tags">${subjects.map(subject => `<span class="subject-tag">${escapeHTML(subject)}</span>`).join("")}</div>
             <div class="admin-decision-actions">
@@ -1835,13 +1839,16 @@ function openAdminApplication(applicationId) {
             <p class="admin-feedback" role="status" aria-live="polite"></p>
             <details class="admin-review-details">
                 <summary>View more details and decide by subject</summary>
-                <div class="review-detail"><h4>About the applicant</h4><p>${escapeHTML(application.bio)}</p></div>
+                <div class="admin-details-layout">
+                <div class="admin-metadata">
+                <div class="review-detail admin-metadata-wide"><h4>About the applicant</h4><p>${escapeHTML(application.bio)}</p></div>
                 <div class="review-detail"><h4>School email</h4><p>${escapeHTML(application.applicantEmail)}</p></div>
                 <div class="review-detail"><h4>Tutoring formats</h4><p>${escapeHTML((application.formats || []).join(", "))}</p></div>
                 <div class="review-detail"><h4>Tutoring rate</h4><p>${rate}</p></div>
-                <div class="review-detail"><h4>Availability</h4>${availability || "<p>Not provided.</p>"}</div>
+                <div class="review-detail admin-metadata-wide"><h4>Availability</h4>${availability || "<p>Not provided.</p>"}</div>
                 <div class="review-detail"><h4>Maximum students per session</h4><p>${escapeHTML(application.maxStudents ?? "Not provided")}</p></div>
                 <div class="review-detail"><h4>Preferred contact method</h4><p>${escapeHTML(application.contactMethod || "Not provided")}</p></div>
+                </div>
                 <form class="admin-subject-decisions">
                     <h4>Decide by subject</h4>
                     ${subjects.map(subject => `
@@ -1856,6 +1863,7 @@ function openAdminApplication(applicationId) {
                     `).join("")}
                     <button type="submit" class="button button-accept button-full">Save subject decisions</button>
                 </form>
+                </div>
             </details>
             <button type="button" class="text-button admin-close-review">Close application</button>
         </article>
@@ -1894,7 +1902,12 @@ function openAdminApplication(applicationId) {
         saveDecision(Object.fromEntries([...detail.querySelectorAll("[data-subject]")]
             .map(select => [select.dataset.subject, select.value])));
     });
-    detail.querySelector(".admin-close-review").addEventListener("click", () => detail.classList.add("hidden"));
+    const layout = document.getElementById("admin-review-layout");
+    detail.querySelector(".admin-close-review").addEventListener("click", () => {
+        detail.classList.add("hidden");
+        layout.classList.remove("has-open-application");
+    });
+    layout.classList.add("has-open-application");
     detail.classList.remove("hidden");
     detail.scrollIntoView({ behavior: "smooth", block: "start" });
 }

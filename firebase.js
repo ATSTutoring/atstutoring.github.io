@@ -86,6 +86,11 @@ window.submitTutorApplication = async function (applicationData) {
 
     const applicationRef = doc(db, "tutorApplications", user.uid);
     const mailRef = doc(db, "mail", user.uid);
+    const availability = Object.fromEntries(Object.entries(applicationData.availability || {})
+        .filter(([, times]) => Array.isArray(times) && times.length > 0));
+    if (!Object.keys(availability).length) {
+        throw new Error("Select at least one available time.");
+    }
 
     return runTransaction(db, async transaction => {
         const existing = await transaction.get(applicationRef);
@@ -98,6 +103,7 @@ window.submitTutorApplication = async function (applicationData) {
 
         transaction.set(applicationRef, {
             ...applicationData,
+            availability,
             userId: user.uid,
             applicantEmail: user.email.toLowerCase(),
             status: "pending",
@@ -197,7 +203,8 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
             formats: application.formats,
             rateType: application.rateType,
             hourlyRate: application.hourlyRate ?? null,
-            availability: application.availability,
+            availability: Object.fromEntries(Object.entries(application.availability || {})
+                .filter(([, times]) => Array.isArray(times) && times.length > 0)),
             maxStudents: application.maxStudents ?? null,
             contactMethod: application.contactMethod || "School email",
             contactEmail: application.shareSchoolEmail === true ? application.applicantEmail : null
