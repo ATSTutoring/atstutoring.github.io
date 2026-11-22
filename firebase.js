@@ -136,6 +136,18 @@ window.getAllTutorApplications = function () {
     return readDocuments(collection(db, "tutorApplications"));
 };
 
+window.getPendingTutorApplications = function () {
+    if (!window.isAdminUser()) throw new Error("Administrator access required.");
+    return readDocuments(query(
+        collection(db, "tutorApplications"), where("status", "==", "pending")
+    ));
+};
+
+window.getExistingTutors = function () {
+    if (!window.isAdminUser()) throw new Error("Administrator access required.");
+    return readDocuments(collection(db, "tutors"));
+};
+
 window.getTutorsForSubject = function (subject) {
     return readDocuments(query(
         collection(db, "tutors"), where("subjects", "array-contains", subject)
@@ -152,6 +164,9 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
     await runTransaction(db, async transaction => {
         const application = (await transaction.get(applicationRef)).data();
         if (!application) throw new Error("Application no longer exists.");
+        if ((application.status || "pending") !== "pending") {
+            throw new Error("This application has already been reviewed. Refresh the dashboard.");
+        }
 
         const subjects = application.subjects;
         if (!subjects.length || Object.keys(subjectStatuses).length !== subjects.length ||
@@ -183,7 +198,34 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
             rateType: application.rateType,
             hourlyRate: application.hourlyRate ?? null,
             availability: application.availability,
+            maxStudents: application.maxStudents ?? null,
+            contactMethod: application.contactMethod || "School email",
             contactEmail: application.shareSchoolEmail === true ? application.applicantEmail : null
         });
+    });
+};
+
+window.removeExistingTutor = async function (applicationId) {
+    if (!window.isAdminUser()) throw new Error("Administrator access required.");
+
+    const applicationRef = doc(db, "tutorApplications", applicationId);
+    const tutorRef = doc(db, "tutors", applicationId);
+    const reviewer = auth.currentUser.email.toLowerCase();
+
+    return runTransaction(db, async transaction => {
+        const application = (await transaction.get(applicationRef)).data();
+        if (!application) throw new Error("The tutor's application could not be found.");
+        if (application.status === "removed") return false;
+        if (!["approved", "partially_approved"].includes(application.status)) {
+            throw new Error("This application does not have an active tutor approval.");
+        }
+
+        transaction.delete(tutorRef);
+        transaction.update(applicationRef, {
+            status: "removed",
+            removedBy: reviewer,
+            removedAt: serverTimestamp()
+        });
+        return true;
     });
 };

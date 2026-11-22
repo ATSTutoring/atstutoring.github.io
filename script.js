@@ -68,6 +68,7 @@ let studentName = "";
 let pendingFeature = null;
 // Stores applications retrieved for the admin dashboard.
 let adminApplications = [];
+let adminLoadVersion = 0;
 
 // Stores the currently authenticated ATS user.
 window.currentUser = null;
@@ -186,8 +187,10 @@ window.handleAuthStateChanged = function(user) {
     document.getElementById("sign-out-button").classList.toggle("hidden", !user);
     if (!user) {
         adminApplications = [];
+        adminLoadVersion++;
         for (const id of ["tutor-grid", "tutor-profile", "application-status-content",
-            "admin-applications-content", "admin-application-detail"]) {
+            "admin-applications-content", "admin-application-detail", "admin-tutors-content",
+            "admin-dashboard-feedback", "admin-tutors-feedback"]) {
             document.getElementById(id).replaceChildren();
         }
     }
@@ -216,7 +219,8 @@ window.handleAuthStateChanged = function(user) {
         "signup-screen",
         "signup-review-screen",
         "application-status-screen",
-        "admin-dashboard-screen"
+        "admin-dashboard-screen",
+        "admin-tutors-screen"
     ];
 
     const currentScreen = document.querySelector(".screen.active");
@@ -229,7 +233,7 @@ window.handleAuthStateChanged = function(user) {
 
     if (
         user &&
-        currentScreen?.id === "admin-dashboard-screen" &&
+        ["admin-dashboard-screen", "admin-tutors-screen"].includes(currentScreen?.id) &&
         (!window.isAdminUser || !window.isAdminUser())
     ) {
         goHome();
@@ -382,7 +386,11 @@ async function displayTutors() {
 
     emptyState.classList.add("hidden");
 
-    matchingTutors.forEach(tutor => {
+    renderTutorCards(matchingTutors, grid);
+}
+
+function renderTutorCards(tutors, grid, manageTutors = false) {
+    tutors.forEach(tutor => {
         tutor.name = `${tutor.firstName} ${tutor.lastName}`;
         tutor.rate = tutor.rateType === "paid" ? `MXN ${tutor.hourlyRate} per hour` : "Free tutoring";
 
@@ -440,7 +448,7 @@ async function displayTutors() {
         card
             .querySelector("button")
             .addEventListener("click", () => {
-                openTutorProfile(tutor);
+                openTutorProfile(tutor, manageTutors);
             });
 
         grid.appendChild(card);
@@ -452,8 +460,12 @@ async function displayTutors() {
     SCREEN 4 — FULL TUTOR PROFILE
 */
 
-function openTutorProfile(tutor) {
+function openTutorProfile(tutor, manageTutors = false) {
     if (!window.currentUser) return;
+    if (manageTutors && !window.isAdminUser?.()) return;
+
+    const back = document.getElementById("tutor-profile-back");
+    back.onclick = () => manageTutors ? loadExistingTutors() : displayTutors();
 
     const profile = document.getElementById("tutor-profile");
     const tags = tutor.subjects.map(subject =>
@@ -546,6 +558,35 @@ function openTutorProfile(tutor) {
 
         </article>
     `;
+
+    if (manageTutors) {
+        const controls = document.createElement("section");
+        controls.className = "profile-section tutor-management";
+        controls.innerHTML = `
+            <button type="button" class="button button-danger">Remove as tutor</button>
+            <p class="admin-feedback" role="status" aria-live="polite"></p>
+        `;
+        const button = controls.querySelector("button");
+        const feedback = controls.querySelector('[role="status"]');
+        button.addEventListener("click", async () => {
+            if (!window.confirm(`Remove ${tutor.name} as a tutor? Their profile will disappear from subject searches.`)) return;
+            button.disabled = true;
+            feedback.textContent = "Removing tutor...";
+            const user = window.currentUser;
+            try {
+                await window.removeExistingTutor(tutor.id);
+                if (window.currentUser === user && window.isAdminUser?.()) {
+                    await loadExistingTutors(`${tutor.name} has been removed as a tutor.`);
+                }
+            } catch (error) {
+                console.error("Tutor removal error:", error);
+                feedback.textContent = error.message || "We couldn’t remove this tutor. Please try again.";
+            } finally {
+                button.disabled = false;
+            }
+        });
+        profile.querySelector("article").appendChild(controls);
+    }
 
     showScreen("profile-screen");
 }
@@ -1621,7 +1662,8 @@ async function loadMyApplications() {
                 pending: "Awaiting approval",
                 approved: "Approved",
                 rejected: "Rejected",
-                partially_approved: "Partially approved"
+                partially_approved: "Partially approved",
+                removed: "Tutor access removed"
             };
 
             const subjectHTML = Object.entries(
@@ -1658,7 +1700,10 @@ async function loadMyApplications() {
                         </strong>
                     </p>
 
-                    <h4>Subject decisions</h4>
+                    ${overallStatus === "removed"
+                        ? "<p>Your tutor profile has been removed from the directory. Please contact the school reviewer for more information.</p>"
+                        : ""}
+                    <h4>${overallStatus === "removed" ? "Original subject decisions" : "Subject decisions"}</h4>
 
                     ${subjectHTML}
 
@@ -1703,304 +1748,186 @@ function requestAdminDashboard() {
 }
 
 
-// Retrieve and display all applications
-async function loadAdminApplications() {
-
-    if (!window.currentUser ||
-        !window.isAdminUser ||
-        !window.isAdminUser()) {
+// Each request has a version so an older response cannot overwrite a newer view.
+async function loadAdminApplications(message = "") {
+    if (!window.currentUser || !window.isAdminUser?.()) {
         alert("Administrator access required.");
         goHome();
         return;
     }
 
-    const container = document.getElementById(
-        "admin-applications-content"
-    );
-
-    const detail = document.getElementById(
-        "admin-application-detail"
-    );
-
-    container.innerHTML = "Loading applications...";
-    detail.innerHTML = "";
+    const version = ++adminLoadVersion;
+    const user = window.currentUser;
+    const container = document.getElementById("admin-applications-content");
+    const detail = document.getElementById("admin-application-detail");
+    const feedback = document.getElementById("admin-dashboard-feedback");
+    container.textContent = "Loading applications...";
+    detail.replaceChildren();
     detail.classList.add("hidden");
-
+    feedback.textContent = message;
     showScreen("admin-dashboard-screen");
 
     try {
-
-        const user = window.currentUser;
-        const applications = await window.getAllTutorApplications();
-        if (window.currentUser !== user) return;
-        adminApplications = applications;
-
-        // Show pending applications first.
-        adminApplications.sort((a, b) => {
-            const aPending = a.status === "pending" ? 0 : 1;
-            const bPending = b.status === "pending" ? 0 : 1;
-
-            return aPending - bPending;
-        });
+        const applications = await window.getPendingTutorApplications();
+        if (window.currentUser !== user || version !== adminLoadVersion) return;
+        adminApplications = applications.filter(application => application.status === "pending");
+        adminApplications.sort((a, b) =>
+            (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0)
+        );
 
         if (adminApplications.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <h3>No applications yet.</h3>
-                    <p>
-                        New tutor applications will appear here.
-                    </p>
+                    <h3>All caught up.</h3>
+                    <p>There are no applications awaiting approval.</p>
                 </div>
             `;
             return;
         }
 
-        container.innerHTML = `
-            <h3 style="margin-top: 28px;">
-                Applications (${adminApplications.length})
-            </h3>
-
-            <div id="admin-application-list"></div>
-        `;
-
-        const list = document.getElementById(
-            "admin-application-list"
-        );
-
+        container.innerHTML = `<h3 class="admin-list-title">Awaiting approval (${adminApplications.length})</h3>`;
         adminApplications.forEach(application => {
-
             const card = document.createElement("article");
-            card.className = "profile-card";
-
-            const statusLabels = {
-                pending: "Awaiting approval",
-                approved: "Approved",
-                rejected: "Rejected",
-                partially_approved: "Partially approved"
-            };
-
+            card.className = "profile-card admin-application-card";
             card.innerHTML = `
-                <h3>
-                    ${escapeHTML(application.firstName)}
-                    ${escapeHTML(application.lastName)}
-                </h3>
-
+                <h3>${escapeHTML(application.firstName)} ${escapeHTML(application.lastName)}</h3>
                 <p>Grade ${escapeHTML(application.grade)}</p>
-
-                <p>
-                    <strong>Status:</strong>
-                    ${statusLabels[application.status] || "Pending"}
-                </p>
-
-                <p>
-                    <strong>Subjects:</strong>
-                    ${escapeHTML(
-                        (application.subjects || []).join(", ")
-                    )}
-                </p>
-
-                <button
-                    type="button"
-                    class="button button-secondary"
-                    data-application-id="${escapeHTML(application.id)}"
-                >
-                    Review application →
-                </button>
+                <p class="application-status">Awaiting approval</p>
+                <p>${escapeHTML((application.subjects || []).join(", "))}</p>
+                <button type="button" class="button button-secondary">Review application</button>
             `;
-
-            list.appendChild(card);
+            card.querySelector("button").addEventListener("click", () => openAdminApplication(application.id));
+            container.appendChild(card);
         });
-
-        list.querySelectorAll("[data-application-id]")
-            .forEach(button => {
-
-                button.addEventListener("click", () => {
-                    openAdminApplication(
-                        button.dataset.applicationId
-                    );
-                });
-
-            });
-
     } catch (error) {
-
+        if (window.currentUser !== user || version !== adminLoadVersion) return;
         console.error("Admin dashboard error:", error);
-
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>Unable to load applications.</h3>
-                <p>
-                    Check your administrator permissions and try again.
-                </p>
-            </div>
-        `;
+        container.innerHTML = `<div class="empty-state"><h3>Unable to load applications.</h3><p>Please refresh to try again.</p></div>`;
     }
 }
 
-
-// Open an individual application
 function openAdminApplication(applicationId) {
+    if (!window.isAdminUser?.()) return;
+    const application = adminApplications.find(item => item.id === applicationId);
+    if (!application || application.status !== "pending") return;
 
-    const application = adminApplications.find(
-        item => item.id === applicationId
-    );
-
-    if (!application) {
-        return;
-    }
-
-    const detail = document.getElementById(
-        "admin-application-detail"
-    );
-
-    const availabilityHTML = Object.entries(
-        application.availability || {}
-    ).map(([day, times]) => `
-        <p>
-            <strong>${escapeHTML(day)}:</strong>
-            ${escapeHTML(Array.isArray(times) ? times.join(", ") : "")}
-        </p>
+    const name = `${application.firstName} ${application.lastName}`;
+    const detail = document.getElementById("admin-application-detail");
+    const subjects = application.subjects || [];
+    const availability = Object.entries(application.availability || {}).map(([day, times]) => `
+        <p><strong>${escapeHTML(day)}</strong> ${escapeHTML(Array.isArray(times) ? times.join(", ") : "")}</p>
     `).join("");
-
-    const subjectsHTML = (application.subjects || []).map(subject => {
-        const status = application.subjectStatuses?.[subject];
-        return `
-            <label class="form-field">
-                <span>${escapeHTML(subject)}</span>
-                <select data-subject="${escapeHTML(subject)}" required>
-                    <option value="">Choose a decision</option>
-                    <option value="approved" ${status === "approved" ? "selected" : ""}>Approve</option>
-                    <option value="rejected" ${status === "rejected" ? "selected" : ""}>Decline</option>
-                </select>
-            </label>
-        `;
-    }).join("");
-
     const rate = application.rateType === "paid"
-        ? `MXN $${escapeHTML(application.hourlyRate)} per hour`
-        : "Free tutoring";
-
-    const submittedAt = application.createdAt?.toDate
-        ? application.createdAt.toDate().toLocaleString()
-        : "Date unavailable";
+        ? `MXN $${escapeHTML(application.hourlyRate)} per hour` : "Free tutoring";
 
     detail.innerHTML = `
         <div class="form-divider"></div>
-
-        <h3>Application details</h3>
-
-        <div class="profile-card">
-
-            <h2>
-                ${escapeHTML(application.firstName)}
-                ${escapeHTML(application.lastName)}
-            </h2>
-
-            <p>
-                <strong>Applicant email:</strong>
-                ${escapeHTML(application.applicantEmail)}
-            </p>
-
-            <p>
-                <strong>Grade:</strong>
-                ${escapeHTML(application.grade)}
-            </p>
-
-            <p>
-                <strong>Submitted:</strong>
-                ${escapeHTML(submittedAt)}
-            </p>
-
-            <div class="review-detail">
-                <h4>About the applicant</h4>
-                <p>${escapeHTML(application.bio)}</p>
+        <article class="profile-card admin-review-card">
+            <h2>${escapeHTML(name)}</h2>
+            <p>Grade ${escapeHTML(application.grade)}</p>
+            <p class="application-status">Awaiting approval</p>
+            <p class="admin-subject-intro">${escapeHTML(name)} is requesting being a tutor for the following subjects:</p>
+            <div class="subject-tags">${subjects.map(subject => `<span class="subject-tag">${escapeHTML(subject)}</span>`).join("")}</div>
+            <div class="admin-decision-actions">
+                <button type="button" class="button button-accept" data-decision="approved">Accept for all subjects</button>
+                <button type="button" class="button button-danger" data-decision="rejected">Reject for all subjects</button>
             </div>
-
-            <div class="review-detail">
-                <h4>Tutoring formats</h4>
-                <p>
-                    ${escapeHTML(
-                        (application.formats || []).join(", ")
-                    )}
-                </p>
-            </div>
-
-            <div class="review-detail">
-                <h4>Tutoring rate</h4>
-                <p>${rate}</p>
-            </div>
-
-            <div class="review-detail">
-                <h4>Availability</h4>
-                ${availabilityHTML || "<p>Not provided.</p>"}
-            </div>
-
-            <div class="review-detail">
-                <h4>Maximum students per session</h4>
-                <p>${escapeHTML(application.maxStudents)}</p>
-            </div>
-
-            <div class="review-detail">
-                <h4>Preferred contact method</h4>
-                <p>${escapeHTML(application.contactMethod)}</p>
-            </div>
-
-            <form id="application-decision-form" class="review-detail">
-                <h4>Subject decisions</h4>
-                ${subjectsHTML}
-                <button type="submit" class="button button-primary button-full">Save decision</button>
-                <p role="status"></p>
-            </form>
-
-            <button
-                type="button"
-                class="button button-secondary button-full"
-                onclick="document.getElementById('admin-application-detail').classList.add('hidden')"
-            >
-                Close details
-            </button>
-
-        </div>
+            <p class="admin-feedback" role="status" aria-live="polite"></p>
+            <details class="admin-review-details">
+                <summary>View more details and decide by subject</summary>
+                <div class="review-detail"><h4>About the applicant</h4><p>${escapeHTML(application.bio)}</p></div>
+                <div class="review-detail"><h4>School email</h4><p>${escapeHTML(application.applicantEmail)}</p></div>
+                <div class="review-detail"><h4>Tutoring formats</h4><p>${escapeHTML((application.formats || []).join(", "))}</p></div>
+                <div class="review-detail"><h4>Tutoring rate</h4><p>${rate}</p></div>
+                <div class="review-detail"><h4>Availability</h4>${availability || "<p>Not provided.</p>"}</div>
+                <div class="review-detail"><h4>Maximum students per session</h4><p>${escapeHTML(application.maxStudents ?? "Not provided")}</p></div>
+                <div class="review-detail"><h4>Preferred contact method</h4><p>${escapeHTML(application.contactMethod || "Not provided")}</p></div>
+                <form class="admin-subject-decisions">
+                    <h4>Decide by subject</h4>
+                    ${subjects.map(subject => `
+                        <label class="form-field">
+                            <span>${escapeHTML(subject)}</span>
+                            <select data-subject="${escapeHTML(subject)}" required>
+                                <option value="">Choose a decision</option>
+                                <option value="approved">Accept</option>
+                                <option value="rejected">Reject</option>
+                            </select>
+                        </label>
+                    `).join("")}
+                    <button type="submit" class="button button-accept button-full">Save subject decisions</button>
+                </form>
+            </details>
+            <button type="button" class="text-button admin-close-review">Close application</button>
+        </article>
     `;
 
-    const form = detail.querySelector("form");
-    form.addEventListener("submit", async event => {
-        event.preventDefault();
-
-        const button = form.querySelector('button[type="submit"]');
-        const feedback = form.querySelector('[role="status"]');
-        const decisions = Object.fromEntries(
-            [...form.querySelectorAll("[data-subject]")].map(select => [
-                select.dataset.subject, select.value
-            ])
-        );
-
-        button.disabled = true;
+    let saving = false;
+    const feedback = detail.querySelector('[role="status"]');
+    async function saveDecision(decisions) {
+        if (saving) return;
+        saving = true;
+        const user = window.currentUser;
+        const controls = [...detail.querySelectorAll("button, select")];
+        controls.forEach(control => { control.disabled = true; });
         feedback.textContent = "Saving decision...";
         try {
             await window.updateTutorApplicationDecision(applicationId, decisions);
-            if (form.isConnected && document.querySelector("#admin-dashboard-screen.active")) {
-                await loadAdminApplications();
-                if (document.querySelector("#admin-dashboard-screen.active")) {
-                    openAdminApplication(applicationId);
-                    const updatedFeedback = detail.querySelector('[role="status"]');
-                    if (updatedFeedback) updatedFeedback.textContent = "Decision saved.";
-                }
+            if (window.currentUser === user && window.isAdminUser?.()) {
+                await loadAdminApplications(`Decision saved for ${name}.`);
             }
         } catch (error) {
             console.error("Application decision error:", error);
-            feedback.textContent = "We couldn’t save the decision. Please try again.";
+            feedback.textContent = error.message || "We couldn’t save the decision. Please try again.";
         } finally {
-            button.disabled = false;
+            saving = false;
+            controls.forEach(control => { control.disabled = false; });
         }
-    });
+    }
 
+    detail.querySelectorAll("[data-decision]").forEach(button => {
+        button.addEventListener("click", () => saveDecision(Object.fromEntries(
+            subjects.map(subject => [subject, button.dataset.decision])
+        )));
+    });
+    detail.querySelector("form").addEventListener("submit", event => {
+        event.preventDefault();
+        saveDecision(Object.fromEntries([...detail.querySelectorAll("[data-subject]")]
+            .map(select => [select.dataset.subject, select.value])));
+    });
+    detail.querySelector(".admin-close-review").addEventListener("click", () => detail.classList.add("hidden"));
     detail.classList.remove("hidden");
+    detail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
-    detail.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
+async function loadExistingTutors(message = "") {
+    if (!window.currentUser || !window.isAdminUser?.()) {
+        alert("Administrator access required.");
+        goHome();
+        return;
+    }
+
+    const user = window.currentUser;
+    const version = ++adminLoadVersion;
+    const container = document.getElementById("admin-tutors-content");
+    container.textContent = "Loading tutors...";
+    document.getElementById("admin-tutors-feedback").textContent = message;
+    showScreen("admin-tutors-screen");
+
+    try {
+        const tutors = await window.getExistingTutors();
+        if (window.currentUser !== user || version !== adminLoadVersion) return;
+        tutors.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+        container.replaceChildren();
+        if (!tutors.length) {
+            container.innerHTML = `<div class="empty-state"><h3>No approved tutors yet.</h3><p>Approved tutors will appear here.</p></div>`;
+            return;
+        }
+        renderTutorCards(tutors, container, true);
+    } catch (error) {
+        if (window.currentUser !== user || version !== adminLoadVersion) return;
+        console.error("Existing tutors error:", error);
+        container.textContent = "We couldn’t load tutors. Please refresh to try again.";
+    }
 }
 
 if (new URLSearchParams(window.location.search).get("review") === "1") {

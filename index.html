@@ -218,14 +218,34 @@
             Refresh applications ↻
         </button>
 
+        <p id="admin-dashboard-feedback" class="admin-feedback" role="status" aria-live="polite"></p>
+
         <div id="admin-applications-content">
             Loading applications...
         </div>
 
         <div id="admin-application-detail" class="hidden"></div>
 
+        <div class="admin-dashboard-footer">
+            <button type="button" class="button button-secondary button-full" onclick="loadExistingTutors()">
+                Review existing tutors
+            </button>
+        </div>
+
     </div>
 
+</section>
+
+<section id="admin-tutors-screen" class="screen results-screen">
+    <button class="back-button" onclick="loadAdminApplications()">← Back to pending applications</button>
+    <div class="results-heading">
+        <div class="step-label">ATS TUTORING · ADMINISTRATION</div>
+        <h2>Existing tutors</h2>
+        <p class="section-description">View approved tutors across all subjects and manage their access.</p>
+        <button type="button" class="text-button" onclick="loadExistingTutors()">Refresh tutors</button>
+        <p id="admin-tutors-feedback" class="admin-feedback" role="status" aria-live="polite"></p>
+    </div>
+    <div id="admin-tutors-content" class="tutor-grid"></div>
 </section>
 
  <!-- SCREEN: ATS GOOGLE SIGN-IN -->
@@ -422,7 +442,7 @@
 
         <section id="profile-screen" class="screen profile-screen">
 
-            <button class="back-button" onclick="showScreen('results-screen')">
+            <button id="tutor-profile-back" class="back-button" onclick="showScreen('results-screen')">
                 ← Back to tutors
             </button>
 

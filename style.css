@@ -2394,3 +2394,150 @@ main {
         flex: auto;
     }
 }
+/* Reviewer dashboard */
+.admin-list-title {
+    margin: 28px 0 16px;
+}
+
+.admin-application-card + .admin-application-card {
+    margin-top: 18px;
+}
+
+.admin-application-card p {
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+.admin-application-card .button {
+    margin-top: 22px;
+}
+
+.application-status {
+    display: inline-block;
+    margin: 14px 0;
+    padding: 7px 12px;
+    border-radius: 8px;
+    background: #fff4dd;
+    color: #78530b;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.admin-review-card h2 {
+    margin-top: 0;
+    font-size: clamp(24px, 4vw, 32px);
+}
+
+.admin-review-card {
+    overflow-wrap: anywhere;
+}
+
+.admin-subject-intro {
+    margin: 18px 0 14px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.admin-decision-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+}
+
+.admin-decision-actions .button {
+    flex: 1 1 180px;
+    white-space: normal;
+    line-height: 1.45;
+    padding: 15px;
+    min-height: 52px;
+}
+
+.button-accept {
+    background: #197145;
+    color: #fff;
+    border: 1px solid #197145;
+}
+
+.button-accept:hover {
+    background: #125733;
+    border-color: #125733;
+}
+
+.button-danger {
+    background: #fff;
+    color: #a42332;
+    border: 1px solid #b82e3d;
+}
+
+.button-danger:hover {
+    background: #fff0f1;
+}
+
+.admin-feedback {
+    margin-top: 14px;
+    color: var(--navy);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.admin-feedback:empty {
+    display: none;
+}
+
+.admin-review-details {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.admin-review-details summary {
+    color: var(--navy);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.admin-review-details .review-detail {
+    margin-top: 20px;
+}
+
+.admin-subject-decisions .form-field {
+    margin: 18px 0;
+}
+
+.admin-subject-decisions label span {
+    display: block;
+    margin-bottom: 9px;
+    font-size: 14px;
+}
+
+.admin-close-review {
+    margin-top: 24px;
+}
+
+.admin-dashboard-footer {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.tutor-management {
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.admin-review-card button:focus-visible,
+.admin-review-details summary:focus-visible,
+.tutor-management button:focus-visible {
+    outline: 3px solid #4184c7;
+    outline-offset: 4px;
+}
+
+@media (max-width: 520px) {
+    .admin-review-card {
+        padding: 24px 20px;
+    }
+}
