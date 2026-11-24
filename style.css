@@ -125,7 +125,7 @@ a {
 
 .nav-label {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.04em;
 }
@@ -235,7 +235,7 @@ main {
     border: none;
 
     color: var(--red);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -249,7 +249,7 @@ main {
     background: transparent;
 
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 
     transition: color 0.2s ease;
@@ -307,7 +307,7 @@ main {
     margin-bottom: 28px;
 
     color: var(--navy-light);
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.14em;
 }
@@ -362,7 +362,7 @@ main {
     margin-top: 32px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .note-icon {
@@ -431,7 +431,7 @@ main {
 
 .mini-label {
     color: var(--muted);
-    font-size: 9px;
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.12em;
 }
@@ -536,7 +536,7 @@ main {
     margin-top: 8px;
 
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -550,7 +550,7 @@ main {
     border-top: 1px solid var(--border);
 
     color: var(--navy);
-    font-size: 9px;
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.08em;
 }
@@ -607,14 +607,14 @@ main {
 
 .floating-card strong {
     color: var(--navy);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .floating-card small {
     margin-top: 4px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 
@@ -634,7 +634,7 @@ main {
 
 .step-label {
     color: var(--red);
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.14em;
 }
@@ -670,7 +670,7 @@ main {
     margin-bottom: 10px;
 
     color: var(--navy);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -703,7 +703,7 @@ main {
     margin-top: 10px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -728,14 +728,14 @@ main {
 
 .signup-preview strong {
     color: var(--navy);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .signup-preview p {
     margin-top: 6px;
 
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -829,7 +829,7 @@ main {
     margin-top: 5px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .subject-tags {
@@ -848,7 +848,7 @@ main {
     background: var(--blue);
     color: var(--navy-light);
 
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -858,7 +858,7 @@ main {
     margin-top: 15px;
 
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -872,14 +872,14 @@ main {
 .tutor-card-footer .button {
     width: 100%;
     min-height: 43px;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .tutor-rate {
     margin-bottom: 12px;
 
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -914,7 +914,7 @@ main {
     margin-bottom: 22px;
 
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -972,7 +972,7 @@ main {
 .profile-header p {
     margin-top: 6px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .profile-section {
@@ -988,7 +988,7 @@ main {
     margin-top: 10px;
 
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.9;
 }
 
@@ -1014,7 +1014,7 @@ main {
     border: 1px solid var(--border);
     border-radius: 10px;
 
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .availability-item span {
@@ -1031,7 +1031,7 @@ main {
     background: var(--navy);
     color: var(--white);
 
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -1059,7 +1059,7 @@ main {
     border-top: 1px solid var(--border);
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .footer span:first-child {
@@ -1098,7 +1098,7 @@ main {
     .nav-label {
         max-width: 130px;
         text-align: right;
-        font-size: 10px;
+        font-size: 14px;
     }
 
     .hero-screen,
@@ -1177,7 +1177,7 @@ main {
     }
 
     .floating-card strong {
-        font-size: 10px;
+        font-size: 14px;
     }
 
     .profile-card {
@@ -1314,14 +1314,14 @@ main {
     margin-top: 2px;
 
     color: var(--navy);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .signup-benefit small {
     margin-top: 6px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -1336,7 +1336,7 @@ main {
     border-top: 1px solid var(--border);
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -1382,7 +1382,7 @@ main {
     margin-top: 8px;
 
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -1456,7 +1456,7 @@ main {
     margin-bottom: 10px;
 
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -1468,7 +1468,7 @@ main {
     margin-left: 5px;
 
     color: var(--muted) !important;
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -1483,7 +1483,7 @@ main {
     background: var(--white);
     color: var(--navy);
 
-    font-size: 12px;
+    font-size: 14px;
 
     transition:
         border-color 0.2s ease,
@@ -1522,7 +1522,7 @@ main {
     margin: -2px 0 14px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -1546,7 +1546,7 @@ main {
     max-width: 290px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -1554,7 +1554,7 @@ main {
     flex-shrink: 0;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 
@@ -1602,14 +1602,14 @@ main {
 
 .photo-upload-text strong {
     color: var(--navy);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .photo-upload-text small {
     margin-top: 4px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .photo-upload input {
@@ -1645,7 +1645,7 @@ main {
     background: var(--white);
     color: var(--text);
 
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 600;
 
     transition:
@@ -1675,7 +1675,7 @@ main {
     margin-bottom: 12px;
 
     color: var(--navy);
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.06em;
 }
@@ -1705,7 +1705,7 @@ main {
     background: var(--blue-light);
     color: var(--navy);
 
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -1770,12 +1770,12 @@ main {
 
 .choice-card-content strong {
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .choice-card-content small {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .choice-card:has(input:checked) .choice-card-content {
@@ -1826,14 +1826,14 @@ main {
 
 .rate-option strong {
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .rate-option small {
     margin-top: 5px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -1875,7 +1875,7 @@ main {
     background: var(--white);
     color: var(--muted);
 
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 700;
 
     transition: all 0.2s ease;
@@ -1899,21 +1899,21 @@ main {
 
 .availability-time-heading strong {
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .availability-time-heading p {
     margin-top: 5px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
 .availability-time-heading .text-button {
     flex-shrink: 0;
     margin-top: 0;
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .availability-times {
@@ -1933,7 +1933,7 @@ main {
     background: var(--white);
     color: var(--text);
 
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 600;
 
     transition: all 0.2s ease;
@@ -1974,20 +1974,20 @@ main {
     background: #eaf6ee;
     color: #26764a;
 
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
 }
 
 .availability-summary strong {
     color: var(--navy);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .availability-summary p {
     margin-top: 5px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -2058,7 +2058,7 @@ main {
 
 .capacity-value span {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
 }
 
 
@@ -2081,7 +2081,7 @@ main {
 
 .checkbox-consent span {
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -2093,7 +2093,7 @@ main {
     margin-top: 10px;
 
     color: var(--red);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.7;
 }
 
@@ -2116,7 +2116,7 @@ main {
     min-height: 45px;
     padding: 0 16px;
 
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .signup-form-footer .button.hidden {
@@ -2131,7 +2131,7 @@ main {
     margin-top: 20px;
 
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -2223,7 +2223,7 @@ main {
     margin-top: 5px;
 
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .review-detail {
@@ -2232,14 +2232,14 @@ main {
 
 .review-detail h4 {
     color: var(--navy);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .review-detail p {
     margin-top: 8px;
 
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.9;
 
     overflow-wrap: anywhere;
@@ -2266,7 +2266,7 @@ main {
 
 .review-notice p {
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.8;
 }
 
@@ -2330,7 +2330,7 @@ main {
     }
 
     .signup-sidebar > p {
-        font-size: 13px;
+        font-size: 14px;
     }
 
     .signup-benefits {
@@ -2366,7 +2366,7 @@ main {
     }
 
     .day-button {
-        font-size: 9px;
+        font-size: 14px;
     }
 
     .availability-times {
@@ -2696,3 +2696,59 @@ main {
         padding: 24px 20px;
     }
 }
+
+.tutor-avatar {
+    position: relative;
+}
+
+.tutor-avatar img {
+    position: absolute;
+    inset: 0;
+}
+
+.tutor-avatar img[hidden] {
+    display: none;
+}
+
+.google-photo-option {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 26px;
+}
+
+.google-photo-option .tutor-avatar {
+    flex-shrink: 0;
+}
+
+.google-photo-option .checkbox-consent span {
+    font-size: 14px;
+}
+
+/* School colors and clearer reading sizes across every screen. */
+html { scroll-padding-top: 104px; }
+.navbar { position: sticky; top: 0; z-index: 50; min-height: 94px; border-top: 5px solid var(--navy); border-image: linear-gradient(90deg, var(--navy) 0 72%, var(--red) 72% 100%) 1; box-shadow: 0 3px 18px rgba(37, 77, 120, .06); }
+.brand-logo { width: 58px; height: 58px; }
+.hero-screen { background: radial-gradient(ellipse at 85% 25%, #dceafa 0, transparent 52%), linear-gradient(135deg, #fff 30%, #f1f6fc); border-bottom: 5px solid var(--blue); }
+.hero-description { font-size: 17px; line-height: 1.75; }
+.eyebrow { color: var(--navy); letter-spacing: .09em; }
+.form-card, .admin-application-card, .tutor-card { border-top: 4px solid var(--navy); }
+.signup-progress-bar { background: linear-gradient(90deg, var(--navy), var(--red)); }
+.subject-card { border-bottom: 3px solid var(--blue); }
+.subject-card:hover { border-bottom-color: var(--red); }
+footer { border-top: 3px solid var(--navy); background: var(--blue-light); }
+.input-hint, .review-detail p, .checkbox-consent { line-height: 1.6; }
+@media (max-width: 520px) {
+ .navbar { min-height: 86px; padding-inline: 6%; }
+ .brand-logo { width: 52px; height: 52px; }
+ .hero-screen { padding-inline: 6%; }
+ .eyebrow { font-size: 14px; letter-spacing: .035em; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* Keep the larger illustration labels unobstructed. */
+.hero-visual { gap: 16px; }
+.floating-card { position: relative; top: auto; right: auto; bottom: auto; left: auto; }
+.floating-card-top { grid-row: 1; justify-self: end; }
+.visual-card-main { grid-row: 2; }
+.floating-card-bottom { grid-row: 3; justify-self: start; }
+.visual-illustration { height: 165px; }

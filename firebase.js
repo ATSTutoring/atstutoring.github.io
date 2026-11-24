@@ -24,6 +24,14 @@ provider.setCustomParameters({ hd: "ats.edu.mx", prompt: "select_account" });
 
 const settingsRef = doc(db, "settings", "review");
 let reviewerEmail = "";
+let googlePhotoURL = null;
+
+function validGooglePhotoURL(value) {
+    return typeof value === "string" && value.length <= 2048
+        && /^https:\/\/lh[0-9]+[.]googleusercontent[.]com\/[^\s]+$/.test(value);
+}
+
+window.getGoogleProfilePhoto = () => googlePhotoURL;
 
 function isSchoolUser(user) {
     return Boolean(user?.emailVerified && /^[^@\s]+@ats\.edu\.mx$/i.test(user.email || ""));
@@ -49,6 +57,7 @@ window.signOutUser = async function () {
 
 onAuthStateChanged(auth, async user => {
     reviewerEmail = "";
+    googlePhotoURL = null;
     if (!user) {
         window.handleAuthStateChanged(null);
         return;
@@ -63,6 +72,7 @@ onAuthStateChanged(auth, async user => {
         alert("Please sign in with your ATS school Google account.");
         return;
     }
+    if (validGooglePhotoURL(token.claims?.picture)) googlePhotoURL = token.claims.picture;
 
     try {
         const settings = await getDocFromServer(settingsRef);
@@ -103,6 +113,11 @@ window.submitTutorApplication = async function (applicationData) {
     if (contactMethod === "Phone number" && !/^\+?[0-9]{7,15}$/.test(contactPhone)) {
         throw new Error("Enter a valid phone number.");
     }
+    const profilePhotoURL = applicationData.profilePhotoURL
+        ? window.getGoogleProfilePhoto() : null;
+    if (applicationData.profilePhotoURL && !profilePhotoURL) {
+        throw new Error("Your Google profile photo is unavailable. Continue using your initials.");
+    }
 
     return runTransaction(db, async transaction => {
         const existing = await transaction.get(applicationRef);
@@ -119,6 +134,7 @@ window.submitTutorApplication = async function (applicationData) {
             contactMethod,
             contactPhone,
             contactConsent,
+            profilePhotoURL,
             shareSchoolEmail: contactMethod === "School email" && contactConsent,
             userId: user.uid,
             applicantEmail: user.email.toLowerCase(),
@@ -215,6 +231,8 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
             lastName: application.lastName,
             grade: application.grade,
             bio: application.bio,
+            profilePhotoURL: validGooglePhotoURL(application.profilePhotoURL)
+                ? application.profilePhotoURL : null,
             subjects: approved,
             formats: application.formats,
             rateType: application.rateType,

@@ -184,6 +184,7 @@ function continueToFeature() {
 window.handleAuthStateChanged = function(user) {
 
     window.currentUser = user || null;
+    updateGooglePhoto();
     document.getElementById("sign-out-button").classList.toggle("hidden", !user);
     if (!user) {
         adminApplications = [];
@@ -315,9 +316,40 @@ function getAvatar(tutor) {
         .join("")
         .toUpperCase();
 
-    return `<div class="tutor-avatar" aria-hidden="true">${escapeHTML(initials)}</div>`;
+    const photo = typeof tutor.profilePhotoURL === "string"
+        && /^https:\/\/lh[0-9]+[.]googleusercontent[.]com\/[^\s]+$/.test(tutor.profilePhotoURL)
+        ? `<img src="${escapeHTML(tutor.profilePhotoURL)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : "";
+    return `<div class="tutor-avatar" aria-hidden="true"><span>${escapeHTML(initials)}</span>${photo}</div>`;
 }
 
+// Keep the initials visible when an account's linked photo is unavailable.
+document.addEventListener("error", event => {
+    if (event.target.matches?.(".tutor-avatar img")) event.target.hidden = true;
+}, true);
+
+function updateGooglePhoto() {
+    const photo = window.getGoogleProfilePhoto?.();
+    const checkbox = document.getElementById("tutor-use-google-photo");
+    checkbox.disabled = !photo;
+    if (!photo) checkbox.checked = false;
+    const name = [
+        document.getElementById("tutor-first-name").value.trim(),
+        document.getElementById("tutor-last-name").value.trim()
+    ].filter(Boolean).join(" ") || window.currentUser?.displayName || "Your profile";
+    document.getElementById("tutor-google-photo-preview").innerHTML = getAvatar({
+        name,
+        profilePhotoURL: checkbox.checked ? photo : null
+    });
+    document.getElementById("tutor-google-photo-hint").textContent = photo
+        ? "If selected, this photo will be visible to signed-in ATS students after approval."
+        : "No Google profile photo is available for this account. Your initials will be used.";
+}
+
+document.getElementById("tutor-use-google-photo").addEventListener("change", updateGooglePhoto);
+for (const id of ["tutor-first-name", "tutor-last-name"]) {
+    document.getElementById(id).addEventListener("input", updateGooglePhoto);
+}
 
 /*
     SAFELY DISPLAY TEXT
@@ -712,6 +744,7 @@ function resetTutorRegistration() {
 
     document.getElementById("tutor-registration-form").reset();
     updateTutorContact();
+    updateGooglePhoto();
 
     signupStep = 1;
 
@@ -1464,7 +1497,11 @@ function renderRegistrationReview() {
         .join("");
 
 
-    const avatarHTML = getAvatar({ name: `${firstName} ${lastName}` });
+    const avatarHTML = getAvatar({
+        name: `${firstName} ${lastName}`,
+        profilePhotoURL: document.getElementById("tutor-use-google-photo").checked
+            ? window.getGoogleProfilePhoto?.() : null
+    });
 
     const review = document.getElementById(
         "registration-review-card"
@@ -1597,6 +1634,8 @@ async function submitRegistration() {
         grade: document.getElementById("tutor-grade").value,
 
         bio: document.getElementById("tutor-bio").value.trim(),
+        profilePhotoURL: document.getElementById("tutor-use-google-photo").checked
+            ? window.getGoogleProfilePhoto?.() || null : null,
 
         subjects: [...selectedTutorSubjects],
 
@@ -1896,6 +1935,9 @@ function openAdminApplication(applicationId, card) {
                 <summary>View more details and decide by subject</summary>
                 <div class="admin-details-layout">
                 <div class="admin-metadata">
+                ${application.profilePhotoURL
+                    ? `<div class="review-detail admin-metadata-wide"><h4>Profile photo</h4>${getAvatar({name, profilePhotoURL: application.profilePhotoURL})}</div>`
+                    : ""}
                 <div class="review-detail admin-metadata-wide"><h4>About the applicant</h4><p>${escapeHTML(application.bio)}</p></div>
                 <div class="review-detail"><h4>School email</h4><p>${escapeHTML(application.applicantEmail)}</p></div>
                 <div class="review-detail"><h4>Tutoring formats</h4><p>${escapeHTML((application.formats || []).join(", "))}</p></div>
