@@ -2857,3 +2857,5 @@ main > .screen:not(#home-screen) {
     .search-progress-label { font-size: 14px; }
 }
 #help-message { min-height: 120px; resize: vertical; }
+/* Keep the close control available while a short screen scrolls the help form. */
+.help-dialog-heading { position: sticky; top: 0; z-index: 1; background: #fff; padding-bottom: 12px; }
