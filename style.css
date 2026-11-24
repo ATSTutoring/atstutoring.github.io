@@ -2893,7 +2893,7 @@ main > .screen:not(#home-screen) {
 }
 .step-label { display: inline-block; padding: 7px 12px; background: #fbe9ed; border-left: 4px solid #c83948; border-radius: 0 8px 8px 0; color: #96303f; }
 .sessions-container > .text-button { display: block; margin: 0 0 20px; }
-.results-heading { border-top: 7px solid #32699e; border-left: 5px solid #c83948; background: linear-gradient(110deg,#e2edfc,#f5f8ff); }
+.results-heading { border-top: 7px solid #32699e; border-left: 5px solid #c83948; background: linear-gradient(110deg,#f7faff,#fff); }
 .search-progress { padding: 16px; border: 1px solid #bbd1ec; border-radius: 12px; background: #e7f0fd; }
 .search-progress-track { height: 9px; }
 .signup-sidebar { padding: 24px; border-radius: 16px; border-top: 7px solid #c83948; background: linear-gradient(150deg,#dceafa,#f0f6ff); }
@@ -2901,7 +2901,7 @@ main > .screen:not(#home-screen) {
 .signup-progress-track { height: 9px; }
 .profile-section h3 { padding-left: 12px; border-left: 4px solid #c83948; }
 .session-topic { border-left: 4px solid #32699e; background: #e3edfb; }
-.empty-state { background: linear-gradient(135deg,#edf4ff,#fff); border-left: 4px solid #32699e; }
+.empty-state { background: linear-gradient(135deg,#f9fbff,#fff); border-left: 4px solid #32699e; }
 .header-button { background: #dfebfb; border-color: #a8c3e3; }
 .button-secondary { border-color: #a9c4e4; background: #eef4fd; color: #285989; }
 #help-dialog { border-top: 8px solid #32699e; border-bottom: 4px solid #c83948; }
