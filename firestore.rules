@@ -132,7 +132,7 @@ service cloud.firestore {
         && data.tutorContactPhone == (app.contactMethod == 'Phone number' && app.get('contactConsent', false) == true ? app.contactPhone : null);
     }
     match /sessionRequests/{id} {
-      allow get: if schoolUser() && (resource == null || request.auth.uid in [resource.data.studentUid, resource.data.tutorUid]);
+      allow get: if schoolUser() && (resource == null || (request.auth.uid == resource.data.studentUid || request.auth.uid == resource.data.tutorUid));
       allow list: if schoolUser() && request.auth.uid in [resource.data.studentUid, resource.data.tutorUid];
       allow create: if schoolUser() && validSession(request.resource.data, id);
       allow update: if schoolUser()
