@@ -43,7 +43,7 @@ Session details are readable only by the two participants. Tutor contact details
 
 Each acceptance atomically reserves the tutor and student for that hour using `scheduleLocks`. Concurrent acceptance cannot book either participant twice. Cancellation releases both reservations. Booking is currently individual; the tutor's group-capacity preference is retained for future group scheduling.
 
-Tutors use **My tutor profile & application → Edit profile / application**. Saving a revision keeps the original submission date, records an update date, resets subject decisions to pending, pauses the directory listing and queues reviewer email. The reviewer approves the revised profile before it returns to searches. Confirmed sessions retain their agreed time, rate and meeting details. Removed tutor accounts must contact the reviewer instead of editing a removed application.
+Tutors use **My tutor profile & application → Edit profile / application**. Approved tutors save all profile edits immediately, including subject changes. The transaction preserves initial review metadata and creation time, updates the private application and the contact-free directory listing together, and queues no reviewer email. Pending or rejected applicants still require initial approval; removed tutors cannot restore themselves. Confirmed sessions retain their agreed time, rate and meeting details. Removed tutor accounts must contact the reviewer instead of editing a removed application.
 
 Deploy `firestore.rules` before publishing matching frontend files. The new collections are `sessionRequests`, `scheduleLocks` and private `profileEdits` receipts (used to bind legacy application IDs to review notification writes). No paid Firebase services or new packages are used.
 
@@ -74,3 +74,7 @@ On November 24, 2026, the existing public repository was transferred to `ATSTuto
 ## Shared school-color styling
 
 The homepage and shared screens use stronger blue gradients, red-and-blue banners, colored card edges and highlighted progress panels. Search, signup, profiles, sessions, reviewer views and Help share the school palette. These are static HTML/CSS changes using the existing free hosting.
+
+## Pilot notices and online meetings
+
+The shared footer includes a compact tutoring expectations notice and an expandable privacy summary, with the current coordinator address for correction/deletion requests. School-approved privacy ownership, retention and rollout arrangements remain to be confirmed. Online tutors enter a separate HTTPS call-link field when accepting; the link and optional instructions are stored together in the existing private meetingDetails field (250 characters total). Confirmed participants get a Join session link; the meeting URL is never added to the public tutor directory. The site does not create Zoom/Meet calls itself.

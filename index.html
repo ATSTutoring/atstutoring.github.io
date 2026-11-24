@@ -11,7 +11,7 @@
         content="Find academic support and connect with student tutors in the ATS community."
     >
 
-    <link rel="stylesheet" href="style.css?v=20261124-soft-cards">
+    <link rel="stylesheet" href="style.css?v=20261124-profile-policy">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -547,7 +547,7 @@
             </div>
 
 
-            <p id="profile-edit-notice" class="review-notice hidden">You are editing your profile. Saving pauses your listing and sends the update for school approval. Confirmed sessions stay on your schedule.</p>
+            <p id="profile-edit-notice" class="review-notice hidden">You are editing your profile. If you are already approved as a tutor, changes appear immediately without another review. Confirmed sessions keep their agreed details.</p>
             <form id="tutor-registration-form">
 
                 <!-- STEP 1: PERSONAL INFORMATION -->
@@ -1151,6 +1151,10 @@
         <button type="button" class="help-launch" onclick="openHelpDialog()"><span aria-hidden="true">?</span> Help / Report an issue</button>
         <span>ATS TUTORING</span>
         <span>Supporting our community, one student at a time.</span>
+        <div class="footer-notices">
+            <p><strong>Tutoring notice:</strong> ATS Tutoring connects students with school-approved tutors. Tutoring provides additional academic support; accuracy, grades, and results are not guaranteed. Follow school conduct and academic-integrity rules. Report concerns through Help / Report an issue.</p>
+            <details><summary>Privacy notice · How your information is used</summary><p>This student-run website uses Google sign-in and Firebase to store school account details, tutor applications, profiles and session requests. Signed-in ATS users can see tutor profiles, including a photo if the tutor opts in. Applications are accessible to their owner and the configured school reviewer. Session details and any shared tutor contact information are visible to the participants; account administrators can access stored data to maintain the service.</p><p>Application alerts and Help reports are sent through a dedicated Google Apps Script account. Report emails omit your account name and email, but a private account-linked record limits spam; reports are not fully anonymous. Avoid including sensitive information. To request a correction or deletion, contact <a href="mailto:79512@ats.edu.mx">79512@ats.edu.mx</a>. This summary describes the current pilot; school-approved privacy and retention arrangements should be confirmed before wider rollout.</p></details>
+        </div>
     </footer>
 
     <dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-privacy">
@@ -1164,8 +1168,8 @@
         </form>
     </dialog>
 
-    <script type="module" src="firebase.js?v=20261124-color-help"></script>
-    <script src="script.js?v=20261124-color-help"></script>
+    <script type="module" src="firebase.js?v=20261124-profile-policy"></script>
+    <script src="script.js?v=20261124-profile-policy"></script>
 
 </body>
 </html>

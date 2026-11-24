@@ -2922,3 +2922,12 @@ main > .screen:not(#home-screen) {
 .footer { border-top: 4px solid #c83948; background: #dfebfa; }
 @media(max-width:600px) { .hero-screen::before { width: 6px; } .eyebrow { padding: 9px 10px; } }
 
+
+.footer-notices { flex-basis: 100%; width: 100%; color: #465b72; font-size: 14px; line-height: 1.7; text-align: left; border-top: 1px solid #afc6df; padding-top: 18px; }
+.footer-notices p + p { margin-top: 12px; }
+.footer-notices details { margin-top: 12px; }
+.footer-notices summary { cursor: pointer; color: #285989; font-weight: 700; }
+.footer-notices details p { margin-top: 12px; }
+.footer-notices a { color: #285989; text-decoration: underline; }
+.session-controls .session-call-link { display: block; width: 100%; margin: 8px 0 16px; padding: 13px; border: 1px solid #bdcfe4; border-radius: 10px; font: inherit; background: #fff; color: var(--text); }
+.session-controls label { display: block; margin-top: 14px; }

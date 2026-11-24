@@ -34,16 +34,16 @@ service cloud.firestore {
             && data.contactPhone.matches('[+]?[0-9]{7,15}')));
     }
 
-    function validApplication(data) {
+    function validApplication(data, approved) {
       return data.keys().hasOnly([
           'firstName', 'lastName', 'grade', 'bio', 'subjects', 'formats',
           'rateType', 'hourlyRate', 'availability', 'maxStudents', 'contactMethod',
           'shareSchoolEmail', 'contactPhone', 'contactConsent', 'userId', 'applicantEmail', 'status',
-          'subjectStatuses', 'createdAt', 'updatedAt', 'profilePhotoURL'
+          'subjectStatuses', 'createdAt', 'updatedAt', 'profilePhotoURL', 'reviewedBy', 'reviewedAt'
         ])
         && data.userId == request.auth.uid
         && data.applicantEmail == request.auth.token.email.lower()
-        && data.status == 'pending'
+        && data.status == (approved ? 'approved' : 'pending')
         && data.createdAt is timestamp
         && data.firstName is string && data.firstName.size() > 0 && data.firstName.size() <= 50
         && data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 70
@@ -53,7 +53,7 @@ service cloud.firestore {
         && data.subjects.toSet().size() == data.subjects.size()
         && data.subjectStatuses is map
         && data.subjectStatuses.keys().toSet() == data.subjects.toSet()
-        && data.subjectStatuses.values().hasOnly(['pending'])
+        && data.subjectStatuses.values().hasOnly(approved ? ['approved'] : ['pending'])
         && data.formats is list && data.formats.size() > 0 && data.formats.size() <= 2
         && data.formats.hasOnly(['In person', 'Online'])
         && ((data.rateType == 'free' && data.hourlyRate == null)
@@ -70,6 +70,24 @@ service cloud.firestore {
             && data.profilePhotoURL.matches('https://lh[0-9]+[.]googleusercontent[.]com/[^ ]+')));
     }
 
+    function approvedOwnerEdit(applicationId) {
+      let before = get(/databases/$(database)/documents/tutorApplications/$(applicationId)).data;
+      let after = getAfter(/databases/$(database)/documents/tutorApplications/$(applicationId)).data;
+      return schoolUser() && before.userId == request.auth.uid
+        && before.status in ['approved', 'partially_approved']
+        && validApplication(after, true)
+        && after.createdAt == before.createdAt && after.updatedAt == request.time
+        && after.diff(before).affectedKeys().hasOnly(['firstName','lastName','grade','bio','subjects','formats',
+          'rateType','hourlyRate','availability','maxStudents','contactMethod','shareSchoolEmail','contactPhone',
+          'contactConsent','profilePhotoURL','status','subjectStatuses','updatedAt']);
+    }
+    function publicProfile(data) {
+      return {'userId':data.userId,'firstName':data.firstName,'lastName':data.lastName,'grade':data.grade,
+        'bio':data.bio,'subjects':data.subjects,'formats':data.formats,'rateType':data.rateType,
+        'hourlyRate':data.hourlyRate,'availability':data.availability,'maxStudents':data.maxStudents,
+        'profilePhotoURL':data.get('profilePhotoURL', null)};
+    }
+
     match /settings/review {
       allow get: if schoolUser();
     }
@@ -81,7 +99,8 @@ service cloud.firestore {
       allow list: if (schoolUser() && resource.data.userId == request.auth.uid) || reviewer();
       allow create: if schoolUser()
         && applicationId == request.auth.uid
-        && validApplication(request.resource.data)
+        && validApplication(request.resource.data, false)
+        && !request.resource.data.keys().hasAny(['reviewedBy', 'reviewedAt'])
         && request.resource.data.createdAt == request.time
         && !exists(/databases/$(database)/documents/mail/$(applicationId))
         && existsAfter(/databases/$(database)/documents/mail/$(applicationId));
@@ -89,10 +108,14 @@ service cloud.firestore {
         .affectedKeys().hasOnly([
           'status', 'subjectStatuses', 'reviewedBy', 'reviewedAt', 'removedBy', 'removedAt'
         ]);
+      allow update: if approvedOwnerEdit(applicationId)
+        && getAfter(/databases/$(database)/documents/tutors/$(applicationId)).data == publicProfile(request.resource.data);
       allow update: if schoolUser() && resource.data.userId == request.auth.uid
         && resource.data.status != 'removed'
-        && validApplication(request.resource.data)
+        && validApplication(request.resource.data, false)
         && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.get('reviewedBy', null) == resource.data.get('reviewedBy', null)
+        && request.resource.data.get('reviewedAt', null) == resource.data.get('reviewedAt', null)
         && request.resource.data.updatedAt == request.time
         && !existsAfter(/databases/$(database)/documents/tutors/$(applicationId))
         && existsAfter(/databases/$(database)/documents/mail/$(request.auth.uid));
@@ -100,6 +123,8 @@ service cloud.firestore {
 
     match /tutors/{applicationId} {
       allow read: if schoolUser();
+      allow create, update: if approvedOwnerEdit(applicationId)
+        && request.resource.data == publicProfile(getAfter(/databases/$(database)/documents/tutorApplications/$(applicationId)).data);
       allow create, update: if reviewer()
         && request.resource.data.userId is string
         && !request.resource.data.keys().hasAny(['contactEmail', 'contactPhone', 'contactMethod']);

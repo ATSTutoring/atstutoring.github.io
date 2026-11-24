@@ -1727,7 +1727,7 @@ async function submitRegistration() {
         if (window.currentUser !== user) return;
 
         alert(submitted
-            ? "Your tutor application was submitted and is awaiting review."
+            ? editingApplicationId ? "Your profile changes were saved. Approved tutor profiles update immediately; applications not yet approved still need an initial decision." : "Your tutor application was submitted and is awaiting review."
             : "You already have a tutor application on file.");
 
         await loadMyApplications();
@@ -1743,7 +1743,7 @@ async function submitRegistration() {
     } finally {
 
         button.disabled = false;
-        button.textContent = editingApplicationId ? "Save and send for review" : "Submit application";
+        button.textContent = editingApplicationId ? "Save profile changes" : "Submit application";
 
     }
 
@@ -1861,7 +1861,7 @@ async function loadMyApplications() {
             button.addEventListener("click", () => editTutorApplication(application));
             const note = document.createElement("p");
             note.className = "input-hint";
-            note.textContent = "Changes need school approval. Your listing pauses while the updated profile is reviewed. Existing confirmed sessions stay on your schedule.";
+            note.textContent = "Once approved as a tutor, your profile changes appear immediately without another review. Confirmed sessions keep their agreed details.";
             container.children[index].append(note, button);
         });
 
@@ -2139,7 +2139,7 @@ function editTutorApplication(application) {
     document.getElementById("tutor-use-google-photo").checked = Boolean(application.profilePhotoURL && window.getGoogleProfilePhoto?.());
     document.getElementById("tutor-guidelines").checked = false;
     updateGooglePhoto(); updateRateOptions(); renderTutorSubjects(); renderAvailabilityDays(); renderAvailabilityTimes(); updateAvailabilitySummary();
-    document.getElementById("submit-application-button").textContent = "Save and send for review";
+    document.getElementById("submit-application-button").textContent = "Save profile changes";
     document.getElementById("profile-edit-notice")?.classList.remove("hidden");
     showScreen("signup-screen");
 }
@@ -2229,7 +2229,7 @@ function refreshMySessions() { startSessionUpdates(); renderMySessions(); }
 document.getElementById("session-view").addEventListener("change", renderMySessions);
 function renderMySessions() {
     const container = document.getElementById("session-list");
-    const drafts = new Map(Array.from(container.querySelectorAll('textarea[data-session]')).map(input => [input.dataset.session,input.value]));
+    const drafts = new Map(Array.from(container.querySelectorAll('textarea[data-session], input[data-session]')).map(input => [input.dataset.session,input.value]));
     container.replaceChildren();
     if (!window.currentUser) return;
     if (sessionsError) { container.textContent = sessionsError; return; }
@@ -2250,6 +2250,18 @@ function renderMySessions() {
             <div class="session-controls"></div><p class="session-action-feedback" role="status" aria-live="polite"></p>`;
         const controls = card.querySelector('.session-controls');
         if (session.status === "accepted") {
+            if (session.format === 'Online') {
+                const match = session.meetingDetails.match(/https:\/\/[^\s<>]+/i);
+                if (match) {
+                    try {
+                        const url = new URL(match[0]);
+                        if (url.protocol === 'https:' && !url.username && !url.password) {
+                            const join = document.createElement('a'); join.className = 'button button-blue';
+                            join.textContent = 'Join session'; join.href = url.href; join.target = '_blank'; join.rel = 'noopener noreferrer'; controls.appendChild(join);
+                        }
+                    } catch (_) { /* Keep the written instructions available if a link is invalid. */ }
+                }
+            }
             const contact = document.createElement('p');
             contact.textContent = asTutor ? "Student school email: " + session.studentEmail : session.tutorContactEmail ? "Tutor email: " + session.tutorContactEmail : session.tutorContactPhone ? "Tutor phone: " + session.tutorContactPhone : "The tutor has not shared contact details. Use the meeting details above.";
             controls.appendChild(contact);
@@ -2260,7 +2272,7 @@ function renderMySessions() {
             button.addEventListener('click', async () => {
                 if (busySessions.has(session.id)) return;
                 if (decision === 'cancelled' && !window.confirm('Cancel this session request? The other student will see the cancellation in My Sessions.')) return;
-                const detail = details(); if (decision === 'accepted' && (detail.trim().length < 5 || detail.length > 250)) { card.querySelector('.session-action-feedback').textContent = 'Add meeting details in 5–250 characters.'; return; }
+                const detail = details(); if (decision === 'accepted' && (detail.trim().length < 5 || detail.length > 250)) { card.querySelector('.session-action-feedback').textContent = session.format === 'Online' ? 'Add a valid HTTPS meeting link. Link and instructions together must fit within 250 characters.' : 'Add meeting details in 5–250 characters.'; return; }
                 busySessions.add(session.id); controls.querySelectorAll('button').forEach(item => item.disabled = true);
                 const user = window.currentUser;
                 try { await window.decideSessionRequest(session.id, decision, detail); if (window.currentUser === user) document.getElementById('session-feedback').textContent = 'Session ' + decision + '.'; }
@@ -2270,8 +2282,25 @@ function renderMySessions() {
         }
         if (future && session.status === 'pending' && asTutor) {
             const label = document.createElement('label'); label.textContent = 'Meeting place or online meeting link'; label.htmlFor = 'meeting-' + session.id;
-            const input = document.createElement('textarea'); input.id = label.htmlFor; input.dataset.session = session.id; input.maxLength = 250; input.rows = 2; input.placeholder = session.format === 'Online' ? 'Add an online meeting link and instructions.' : 'Choose an appropriate school meeting location.'; input.value = drafts.get(session.id) || '';
-            controls.append(label,input); action('Accept request','accepted',()=>input.value); action('Decline request','declined');
+            const input = document.createElement('textarea'); input.id = label.htmlFor; input.dataset.session = session.id; input.maxLength = 250; input.rows = 2; input.placeholder = session.format === 'Online' ? 'Optional joining instructions (add the meeting link below).' : 'Choose an appropriate school meeting location.'; input.value = drafts.get(session.id) || '';
+            controls.append(label,input);
+            let linkInput;
+            if (session.format === 'Online') {
+                label.textContent = 'Joining instructions';
+                const linkLabel = document.createElement('label'); linkLabel.textContent = 'Zoom / Google Meet / call link'; linkLabel.htmlFor = 'call-link-' + session.id;
+                linkInput = document.createElement('input'); linkInput.type = 'url'; linkInput.id = linkLabel.htmlFor; linkInput.dataset.session = 'call-link-' + session.id; linkInput.placeholder = 'https://meet.google.com/… or https://…zoom.us/…'; linkInput.maxLength = 220; linkInput.className = 'session-call-link';
+                linkInput.value = drafts.get('call-link-' + session.id) || '';
+                linkInput.addEventListener('input', () => drafts.set('call-link-' + session.id, linkInput.value));
+                controls.append(linkLabel,linkInput);
+            }
+            action('Accept request','accepted',()=> {
+                if (!linkInput) return input.value;
+                try {
+                    const url = new URL(linkInput.value.trim());
+                    if (url.protocol !== 'https:' || url.username || url.password) throw new Error();
+                    return url.href + (input.value.trim() ? '\n' + input.value.trim() : '');
+                } catch (_) { return ''; }
+            }); action('Decline request','declined');
         }
         if (future && ['pending','accepted'].includes(session.status)) action('Cancel ' + (session.status === 'accepted' ? 'session' : 'request'),'cancelled');
         container.appendChild(card);

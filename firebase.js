@@ -131,7 +131,9 @@ window.submitTutorApplication = async function (applicationData, editingId = nul
             throw new Error("The application reviewer has not been configured.");
         }
 
-        transaction.set(applicationRef, {
+        const approvedEdit = editingId && ["approved", "partially_approved"].includes(existing.data().status);
+        const nextApplication = {
+            ...(editingId ? existing.data() : {}),
             ...applicationData,
             availability,
             contactMethod,
@@ -141,13 +143,19 @@ window.submitTutorApplication = async function (applicationData, editingId = nul
             shareSchoolEmail: contactMethod === "School email" && contactConsent,
             userId: user.uid,
             applicantEmail: user.email.toLowerCase(),
-            status: "pending",
+            status: approvedEdit ? "approved" : "pending",
             subjectStatuses: Object.fromEntries(
-                applicationData.subjects.map(subject => [subject, "pending"])
+                applicationData.subjects.map(subject => [subject, approvedEdit ? "approved" : "pending"])
             ),
             createdAt: editingId ? existing.data().createdAt : serverTimestamp(),
             ...(editingId ? {updatedAt: serverTimestamp()} : {})
-        });
+        };
+        transaction.set(applicationRef, nextApplication);
+        if (approvedEdit) {
+            const {userId, firstName, lastName, grade, bio, subjects, formats, rateType, hourlyRate, availability, maxStudents, profilePhotoURL} = nextApplication;
+            transaction.set(doc(db, "tutors", editingId), {userId, firstName, lastName, grade, bio, subjects, formats, rateType, hourlyRate: hourlyRate ?? null, availability, maxStudents, profilePhotoURL});
+            return true;
+        }
         if (editingId) {
             transaction.delete(doc(db, "tutors", editingId));
             transaction.set(doc(db, "profileEdits", user.uid), {applicationId: editingId, updatedAt: serverTimestamp()});
