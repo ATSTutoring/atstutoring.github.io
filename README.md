@@ -70,3 +70,7 @@ Run `node tests/scheduling.test.cjs` and `node tests/notifier.test.cjs` for back
 ## School-named address
 
 On November 24, 2026, the existing public repository was transferred to `ATSTutoring/atstutoring.github.io`, preserving source history. The live website is https://atstutoring.github.io/ and Pages publishes from `main`, root. The organization uses GitHub Free and the dedicated website Gmail for notices; no collaborators were invited. Firebase remains in the existing project. Its authorized domains include `atstutoring.github.io`, and `settings/review.reviewUrl` is `https://atstutoring.github.io/?review=1`. School-account sign-in and profile access were verified at the new address. The existing sender reads this reviewer URL dynamically; a fresh application email was not sent during migration. Replace previously shared website links: GitHub Pages URLs at the previous owner are not automatically redirected after repository transfer.
+
+## Shared school-color styling
+
+The homepage and shared screens use stronger blue gradients, red-and-blue banners, colored card edges and highlighted progress panels. Search, signup, profiles, sessions, reviewer views and Help share the school palette. These are static HTML/CSS changes using the existing free hosting.
