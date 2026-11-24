@@ -11,46 +11,63 @@
 */
 
 const subjects = [
-    "Chemistry",
-    "Biology",
-    "Physics",
-    "Physical Science",
-
-    "Historia de México",
-    "World History",
-    "Civismo",
-    "U.S. History",
-
-    "Español",
-    "Expresión Oral",
-    "Lectura y Redacción",
-    "Literatura",
-
-    "Algebra",
-    "Trigonometry",
+    "Accounting",
+    "Advanced Algebra I & II",
+    "Advanced English",
+    "Algebra I & II",
+    "Algebra III & IV",
+    "American Literature I & II",
     "Analytical Geometry",
-    "Calculus",
-
-    "AP Biology",
-    "AP Computer Science Principles",
-    "AP Seminar",
-    "AP Research",
-    "AP Statistics",
-    "AP Physics",
-    "AP English Language and Composition",
-    "AP English Literature",
-    "AP Precalculus",
-    "AP Calculus",
-
-    "English",
-    "American Literature",
-    "Writing & Style",
-
-    "Microeconomics",
     "Anatomy & Physiology",
+    "AP 2D Art",
+    "AP Biology",
+    "AP Calculus AB",
+    "AP Computer Science Principles",
+    "AP English Language & Composition",
+    "AP English Literature & Composition",
+    "AP Human Geography",
+    "AP Physics",
+    "AP Pre Calculus",
+    "AP Research",
+    "AP Seminar",
+    "AP Statistics",
+    "Biology I & II",
+    "Business Administration",
+    "Calculus I & II",
+    "Chemistry I & II",
+    "Civismo de México",
+    "Computer Applications I & II",
+    "Derecho (Mexican Law)",
+    "English Literature I & II",
+    "English Literature III & IV",
+    "Español 9",
+    "Estructura Socioeconómica de México",
     "Everyday Medicine",
-    "SAT",
-    "PAA (Tec, UDEM, etc.)"
+    "Expresión Oral I & II",
+    "French I & II",
+    "French I & IV",
+    "Historia de México",
+    "Italian I & II",
+    "Italian III & IV",
+    "Literatura I & II",
+    "Literature III & IV",
+    "Makerspace I & II",
+    "Marketing",
+    "Microeconomics",
+    "PAA (Examen de admisión)",
+    "Personal Finance",
+    "Physical Science I & II",
+    "Physics I & II",
+    "Psychology I & II",
+    "Research Methods",
+    "SAT Prep",
+    "Senior Speeches",
+    "Statistics",
+    "Taller de Lectura y Redacción I & II",
+    "Trigonometry",
+    "United States History I & II",
+    "World History I & II",
+    "Writing & Style I & II"
 ];
 
 
@@ -60,6 +77,30 @@ const subjects = [
     These variables remember what the student selected
     while moving between screens.
 */
+
+const subjectAliases = {
+    "Chemistry": "Chemistry I & II",
+    "Biology": "Biology I & II",
+    "Physics": "Physics I & II",
+    "Physical Science": "Physical Science I & II",
+    "World History": "World History I & II",
+    "Civismo": "Civismo de México",
+    "U.S. History": "United States History I & II",
+    "Expresión Oral": "Expresión Oral I & II",
+    "Lectura y Redacción": "Taller de Lectura y Redacción I & II",
+    "Literatura": "Literatura I & II",
+    "Algebra": "Algebra I & II",
+    "Calculus": "Calculus I & II",
+    "AP English Language and Composition": "AP English Language & Composition",
+    "AP English Literature": "AP English Literature & Composition",
+    "AP Precalculus": "AP Pre Calculus",
+    "AP Calculus": "AP Calculus AB",
+    "American Literature": "American Literature I & II",
+    "Writing & Style": "Writing & Style I & II",
+    "SAT": "SAT Prep",
+    "PAA (Tec, UDEM, etc.)": "PAA (Examen de admisión)"
+};
+function subjectLabel(value) { return subjectAliases[value] || value; }
 
 let selectedSubject = "";
 let studentName = "";
@@ -449,7 +490,7 @@ function renderTutorCards(tutors, grid, manageTutors = false) {
         const tags = tutor.subjects
             .map(subject => `
                 <span class="subject-tag">
-                    ${escapeHTML(subject)}
+                    ${escapeHTML(subjectLabel(subject))}
                 </span>
             `)
             .join("");
@@ -517,7 +558,7 @@ function openTutorProfile(tutor, manageTutors = false) {
 
     const profile = document.getElementById("tutor-profile");
     const tags = tutor.subjects.map(subject =>
-        `<span class="subject-tag">${escapeHTML(subject)}</span>`
+        `<span class="subject-tag">${escapeHTML(subjectLabel(subject))}</span>`
     ).join("");
 
     const availability = availabilityDays
@@ -1484,7 +1525,7 @@ function renderRegistrationReview() {
     const subjectsHTML = [...selectedTutorSubjects]
         .map(subject => `
             <span class="subject-tag">
-                ${escapeHTML(subject)}
+                ${escapeHTML(subjectLabel(subject))}
             </span>
         `)
         .join("");
@@ -1776,7 +1817,7 @@ async function loadMyApplications() {
 
                 return `
                     <div class="review-detail">
-                        <strong>${escapeHTML(subject)}</strong>
+                        <strong>${escapeHTML(subjectLabel(subject))}</strong>
                         <p>${labels[status] || "Pending"}</p>
                     </div>
                 `;
@@ -1948,7 +1989,7 @@ function openAdminApplication(applicationId, card) {
 
     detail.innerHTML = `
             <p class="admin-subject-intro">${escapeHTML(name)} is requesting being a tutor for the following subjects:</p>
-            <div class="subject-tags">${subjects.map(subject => `<span class="subject-tag">${escapeHTML(subject)}</span>`).join("")}</div>
+            <div class="subject-tags">${subjects.map(subject => `<span class="subject-tag">${escapeHTML(subjectLabel(subject))}</span>`).join("")}</div>
             <div class="admin-decision-actions">
                 <button type="button" class="button button-accept" data-decision="approved">Accept for all subjects</button>
                 <button type="button" class="button button-danger" data-decision="rejected">Reject for all subjects</button>
@@ -1975,7 +2016,7 @@ function openAdminApplication(applicationId, card) {
                     <h4>Decide by subject</h4>
                     ${subjects.map(subject => `
                         <label class="form-field">
-                            <span>${escapeHTML(subject)}</span>
+                            <span>${escapeHTML(subjectLabel(subject))}</span>
                             <select data-subject="${escapeHTML(subject)}" required>
                                 <option value="">Choose a decision</option>
                                 <option value="approved">Accept</option>
@@ -2085,7 +2126,7 @@ function editTutorApplication(application) {
         document.getElementById(id).value = application[key] ?? (key === "maxStudents" ? 1 : "");
     }
     document.getElementById("bio-character-count").textContent = application.bio.length;
-    (application.subjects || []).forEach(subject => selectedTutorSubjects.add(subject));
+    (application.subjects || []).forEach(subject => selectedTutorSubjects.add(subjectLabel(subject)));
     document.querySelectorAll('input[name="format"]').forEach(input => input.checked = application.formats.includes(input.value));
     document.querySelectorAll('input[name="rateType"]').forEach(input => input.checked = input.value === application.rateType);
     Object.entries(application.availability || {}).forEach(([day,times]) => { if (times.length) tutorAvailability[day] = new Set(times); });
@@ -2115,7 +2156,7 @@ function addSessionRequestForm(tutor) {
     container.innerHTML = `<p class="input-hint">One student per booking · one hour · request up to 60 days ahead. Tutor contact details stay private until acceptance. Your school account name and email are shared privately with the tutor. Check My sessions for updates.</p>
         <form id="session-request-form" class="booking-form">
             <div class="booking-grid">
-                <div class="form-field"><label for="booking-subject">Subject</label><select id="booking-subject" required>${tutor.subjects.map(value => '<option>' + escapeHTML(value) + '</option>').join('')}</select></div>
+                <div class="form-field"><label for="booking-subject">Subject</label><select id="booking-subject" required>${tutor.subjects.map(value => '<option value="' + escapeHTML(value) + '">' + escapeHTML(subjectLabel(value)) + '</option>').join('')}</select></div>
                 <div class="form-field"><label for="booking-format">Format</label><select id="booking-format" required>${tutor.formats.map(value => '<option>' + escapeHTML(value) + '</option>').join('')}</select></div>
                 <div class="form-field"><label for="booking-date">Date (Tampico time)</label><input id="booking-date" type="date" required min="${schoolDate()}" max="${schoolDate(new Date(Date.now()+60*86400000))}"></div>
                 <div class="form-field"><label for="booking-time">Available start time</label><select id="booking-time" required disabled><option value="">Choose a date first</option></select></div>
@@ -2125,7 +2166,7 @@ function addSessionRequestForm(tutor) {
             <p id="booking-feedback" role="status" aria-live="polite"></p>
             <button class="button button-primary" type="submit">Send session request</button>
         </form>`;
-    document.getElementById("booking-subject").value = tutor.subjects.includes(selectedSubject) ? selectedSubject : tutor.subjects[0];
+    document.getElementById("booking-subject").value = tutor.subjects.find(subject => subjectLabel(subject) === selectedSubject) || tutor.subjects[0];
     const date = document.getElementById("booking-date"), times = document.getElementById("booking-time");
     date.addEventListener("change", () => {
         times.replaceChildren();
@@ -2197,7 +2238,7 @@ function renderMySessions() {
         const future = session.startAt.toMillis() > Date.now();
         const status = !future && session.status === "pending" ? "Expired request" : !future && session.status === "accepted" ? "Past session" : {pending:"Awaiting tutor approval",accepted:"Confirmed",declined:"Declined",cancelled:"Cancelled"}[session.status] || session.status;
         const card = document.createElement("article"); card.className = "profile-card session-card";
-        card.innerHTML = `<div class="session-heading"><h3>${escapeHTML(session.subject)} with ${escapeHTML(asTutor ? session.studentName : session.tutorName)}</h3><span class="session-status status-${escapeHTML(session.status)}">${escapeHTML(status)}</span></div>
+        card.innerHTML = `<div class="session-heading"><h3>${escapeHTML(subjectLabel(session.subject))} with ${escapeHTML(asTutor ? session.studentName : session.tutorName)}</h3><span class="session-status status-${escapeHTML(session.status)}">${escapeHTML(status)}</span></div>
             ${asTutor ? '<p class="input-hint">School account: ' + escapeHTML(session.studentEmail) + '</p>' : ''}
             <p><strong>${escapeHTML(formatSessionTime(session))}</strong> · 1 hour · Tampico time</p>
             <p>${escapeHTML(session.format)} · ${session.rateType === "paid" ? 'MXN ' + escapeHTML(session.hourlyRate) + ' for this hour' : 'Free tutoring'}</p>

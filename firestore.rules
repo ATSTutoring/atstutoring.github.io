@@ -49,7 +49,7 @@ service cloud.firestore {
         && data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 70
         && data.grade in ['9', '10', '11', '12']
         && data.bio is string && data.bio.size() > 0 && data.bio.size() <= 700
-        && data.subjects is list && data.subjects.size() > 0 && data.subjects.size() <= 34
+        && data.subjects is list && data.subjects.size() > 0 && data.subjects.size() <= 57
         && data.subjects.toSet().size() == data.subjects.size()
         && data.subjectStatuses is map
         && data.subjectStatuses.keys().toSet() == data.subjects.toSet()

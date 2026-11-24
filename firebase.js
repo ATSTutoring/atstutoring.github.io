@@ -194,9 +194,31 @@ window.getExistingTutors = function () {
     return readDocuments(collection(db, "tutors"));
 };
 
+const legacySubjectNames = {
+    "Chemistry": "Chemistry I & II",
+    "Biology": "Biology I & II",
+    "Physics": "Physics I & II",
+    "Physical Science": "Physical Science I & II",
+    "World History": "World History I & II",
+    "Civismo": "Civismo de México",
+    "U.S. History": "United States History I & II",
+    "Expresión Oral": "Expresión Oral I & II",
+    "Lectura y Redacción": "Taller de Lectura y Redacción I & II",
+    "Literatura": "Literatura I & II",
+    "Algebra": "Algebra I & II",
+    "Calculus": "Calculus I & II",
+    "AP English Language and Composition": "AP English Language & Composition",
+    "AP English Literature": "AP English Literature & Composition",
+    "AP Precalculus": "AP Pre Calculus",
+    "AP Calculus": "AP Calculus AB",
+    "American Literature": "American Literature I & II",
+    "Writing & Style": "Writing & Style I & II",
+    "SAT": "SAT Prep",
+    "PAA (Tec, UDEM, etc.)": "PAA (Examen de admisión)"
+};
 window.getTutorsForSubject = function (subject) {
     return readDocuments(query(
-        collection(db, "tutors"), where("subjects", "array-contains", subject)
+        collection(db, "tutors"), where("subjects", "array-contains-any", [subject, ...Object.keys(legacySubjectNames).filter(key => legacySubjectNames[key] === subject)])
     ));
 };
 
