@@ -11,7 +11,7 @@
         content="Find academic support and connect with student tutors in the ATS community."
     >
 
-    <link rel="stylesheet" href="style.css?v=20261123">
+    <link rel="stylesheet" href="style.css?v=20261123-sessions1">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,8 @@
     <span>ATS <strong>Tutoring</strong></span>
 </a>
 
-        <button id="sign-out-button" type="button" class="text-button hidden" onclick="signOutUser()">Sign out</button>
+        <div class="header-actions"><button id="my-sessions-button" type="button" class="text-button hidden" onclick="openMySessions()">My sessions</button>
+        <button id="sign-out-button" type="button" class="text-button hidden" onclick="signOutUser()">Sign out</button></div>
     </header>
 
     <main id="app">
@@ -82,7 +83,7 @@
                         class="text-button"
                         onclick="requestApplicationStatus()"
                     >
-                    Check my tutor application status →
+                    My tutor profile & application
                     </button>
 
                     <button
@@ -551,6 +552,7 @@
             </div>
 
 
+            <p id="profile-edit-notice" class="review-notice hidden">You are editing your profile. Saving pauses your listing and sends the update for school approval. Confirmed sessions stay on your schedule.</p>
             <form id="tutor-registration-form">
 
                 <!-- STEP 1: PERSONAL INFORMATION -->
@@ -966,7 +968,7 @@
                         </div>
 
                         <p class="input-hint">
-                            You can choose any number from 1 to 50.
+                            Capacity can be 1–50 students. Website bookings currently reserve one student per hour; group scheduling is not yet available.
                         </p>
 
                     </div>
@@ -995,7 +997,7 @@
                     <div id="tutor-contact-consent" class="form-field hidden">
                         <label class="checkbox-consent">
                             <input type="checkbox" id="tutor-share-contact" disabled>
-                            <span>I agree to show these contact details to signed-in ATS students if my tutor profile is approved.</span>
+                            <span>I agree to share these contact details privately with students after I accept their session request.</span>
                         </label>
                     </div>
 
@@ -1133,6 +1135,21 @@
 
 </section>
 
+    <section id="sessions-screen" class="screen form-screen">
+        <div class="form-container sessions-container">
+            <button class="text-button" onclick="goHome()">Back to home</button>
+            <p class="step-label">ATS TUTORING · YOUR SCHEDULE</p>
+            <h2>My sessions</h2>
+            <p class="section-description">Requests become confirmed only when the tutor accepts. All times are Tampico school time (UTC−06:00). Sessions last one hour.</p>
+            <div class="sessions-toolbar">
+                <label for="session-view">Show</label>
+                <select id="session-view"><option value="student">Sessions I requested</option><option value="tutor">Requests to me as a tutor</option></select>
+                <button class="button button-secondary" onclick="refreshMySessions()">Refresh</button>
+            </div>
+            <p id="session-feedback" role="status" aria-live="polite"></p>
+            <div id="session-list" class="session-list"></div>
+        </div>
+    </section>
     </main>
 
     <footer class="footer">
@@ -1140,8 +1157,8 @@
         <span>Supporting our community, one student at a time.</span>
     </footer>
 
-    <script type="module" src="firebase.js?v=20261123"></script>
-    <script src="script.js?v=20261123"></script>
+    <script type="module" src="firebase.js?v=20261123-sessions1"></script>
+    <script src="script.js?v=20261123-sessions1"></script>
 
 </body>
 </html>

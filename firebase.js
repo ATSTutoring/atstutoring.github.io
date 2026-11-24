@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import {
     collection, doc, getDocFromServer, getDocsFromServer, getFirestore, query,
-    runTransaction, serverTimestamp, where
+    runTransaction, serverTimestamp, where, Timestamp, onSnapshot
 } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
 import {
     getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut
@@ -90,11 +90,11 @@ window.isAdminUser = function () {
     return isSchoolUser(user) && user.email.toLowerCase() === reviewerEmail;
 };
 
-window.submitTutorApplication = async function (applicationData) {
+window.submitTutorApplication = async function (applicationData, editingId = null) {
     const user = auth.currentUser;
     if (!isSchoolUser(user)) throw new Error("Sign in with your ATS account first.");
 
-    const applicationRef = doc(db, "tutorApplications", user.uid);
+    const applicationRef = doc(db, "tutorApplications", editingId || user.uid);
     const mailRef = doc(db, "mail", user.uid);
     const availability = Object.fromEntries(Object.entries(applicationData.availability || {})
         .filter(([, times]) => Array.isArray(times) && times.length > 0));
@@ -121,7 +121,10 @@ window.submitTutorApplication = async function (applicationData) {
 
     return runTransaction(db, async transaction => {
         const existing = await transaction.get(applicationRef);
-        if (existing.exists()) return false;
+        if (editingId) {
+            if (!existing.exists() || existing.data().userId !== user.uid) throw new Error("You can only edit your own profile.");
+            if (existing.data().status === "removed") throw new Error("Please contact the school reviewer before reapplying.");
+        } else if (existing.exists()) return false;
 
         const settings = (await transaction.get(settingsRef)).data();
         if (!settings?.reviewerEmail || !settings?.reviewUrl) {
@@ -142,8 +145,13 @@ window.submitTutorApplication = async function (applicationData) {
             subjectStatuses: Object.fromEntries(
                 applicationData.subjects.map(subject => [subject, "pending"])
             ),
-            createdAt: serverTimestamp()
+            createdAt: editingId ? existing.data().createdAt : serverTimestamp(),
+            ...(editingId ? {updatedAt: serverTimestamp()} : {})
         });
+        if (editingId) {
+            transaction.delete(doc(db, "tutors", editingId));
+            transaction.set(doc(db, "profileEdits", user.uid), {applicationId: editingId, updatedAt: serverTimestamp()});
+        }
 
         transaction.set(mailRef, {
             to: settings.reviewerEmail,
@@ -227,6 +235,7 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
         }
 
         transaction.set(tutorRef, {
+            userId: application.userId,
             firstName: application.firstName,
             lastName: application.lastName,
             grade: application.grade,
@@ -240,12 +249,7 @@ window.updateTutorApplicationDecision = async function (applicationId, subjectSt
             availability: Object.fromEntries(Object.entries(application.availability || {})
                 .filter(([, times]) => Array.isArray(times) && times.length > 0)),
             maxStudents: application.maxStudents ?? null,
-            contactMethod: application.contactMethod || "",
-            contactEmail: application.shareSchoolEmail === true ? application.applicantEmail : null,
-            contactPhone: application.contactMethod === "Phone number"
-                && application.contactConsent === true
-                && /^\+?[0-9]{7,15}$/.test(application.contactPhone || "")
-                    ? application.contactPhone : null
+
         });
     });
 };
@@ -272,5 +276,128 @@ window.removeExistingTutor = async function (applicationId) {
             removedAt: serverTimestamp()
         });
         return true;
+    });
+};
+
+// Profile contacts stay in the private application; they are copied only to an accepted request.
+window.prepareSchedulingProfiles = async function () {
+    if (!window.isAdminUser()) throw new Error("Administrator access required.");
+    const tutors = await readDocuments(collection(db, "tutors"));
+    for (const tutor of tutors) {
+        if (tutor.userId && !('contactEmail' in tutor) && !('contactPhone' in tutor)) continue;
+        await runTransaction(db, async transaction => {
+            const ref = doc(db, "tutors", tutor.id);
+            const current = (await transaction.get(ref)).data();
+            const application = (await transaction.get(doc(db, "tutorApplications", tutor.id))).data();
+            if (!current) return;
+            if (!application?.userId || !["approved", "partially_approved"].includes(application.status)) {
+                throw new Error("A legacy tutor needs the reviewer to verify their account before scheduling.");
+            }
+            const {contactMethod, contactEmail, contactPhone, id, ...publicProfile} = current;
+            transaction.set(ref, {...publicProfile, userId: application.userId});
+        });
+    }
+};
+
+const schoolDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+window.makeSchoolSlot = function (date, time) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Choose a date.");
+    const match = /^(\d{1,2}):00 (AM|PM)$/.exec(time);
+    if (!match || Number(match[1]) < 1 || Number(match[1]) > 12) throw new Error("Choose an available time.");
+    const hour = Number(match[1]) % 12 + (match[2] === "PM" ? 12 : 0);
+    // Tampico school time is UTC−06:00; dates never depend on the visitor's device zone.
+    const start = new Date(date + "T" + String(hour).padStart(2, "0") + ":00:00-06:00");
+    if (!Number.isFinite(start.getTime())) throw new Error("Choose a valid date.");
+    const local = new Date(start.getTime() - 6 * 3600000);
+    if (local.toISOString().slice(0,10) !== date) throw new Error("Choose a valid date.");
+    return {start, day: schoolDays[local.getUTCDay()], time};
+};
+
+window.requestTutoringSession = async function ({tutorId, date, time, subject, format, topic}) {
+    const user = auth.currentUser;
+    if (!isSchoolUser(user)) throw new Error("Sign in with your ATS account first.");
+    const {start, day} = window.makeSchoolSlot(date, time);
+    if (start <= new Date() || start.getTime() > Date.now() + 60 * 86400000) throw new Error("Choose a future date within 60 days.");
+    topic = (topic || "").trim();
+    if (topic.length < 10 || topic.length > 500) throw new Error("Describe what you need help with in 10–500 characters.");
+    const id = tutorId + "_" + start.getTime() + "_" + user.uid;
+    return runTransaction(db, async transaction => {
+        const tutor = (await transaction.get(doc(db, "tutors", tutorId))).data();
+        const ref = doc(db, "sessionRequests", id);
+        const previous = await transaction.get(ref);
+        if (!tutor?.userId) throw new Error("This tutor is not ready for scheduling yet.");
+        if (tutor.userId === user.uid) throw new Error("You cannot request a session with yourself.");
+        if (!tutor.subjects.includes(subject) || !tutor.formats.includes(format) || !tutor.availability?.[day]?.includes(time)) {
+            throw new Error("The tutor's availability changed. Please reopen their profile.");
+        }
+        if (previous.exists()) throw new Error("You already requested this time. Check My sessions or choose another time.");
+        transaction.set(ref, {
+            tutorId, tutorUid: tutor.userId, studentUid: user.uid,
+            studentName: (user.displayName || user.email.split("@")[0]).slice(0,120),
+            studentEmail: user.email.toLowerCase(),
+            tutorName: tutor.firstName + " " + tutor.lastName,
+            subject, format, topic, startAt: Timestamp.fromDate(start),
+            status: "pending", meetingDetails: "", tutorContactEmail: null, tutorContactPhone: null,
+            rateType: tutor.rateType, hourlyRate: tutor.hourlyRate ?? null,
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+        });
+        return id;
+    });
+};
+
+window.watchMySessions = function (onChange, onError) {
+    const user = auth.currentUser;
+    if (!isSchoolUser(user)) throw new Error("Please sign in first.");
+    const lists = [[], []];
+    const unsubscribes = ["studentUid", "tutorUid"].map((field, index) =>
+        onSnapshot(query(collection(db, "sessionRequests"), where(field, "==", user.uid)), snapshot => {
+            lists[index] = snapshot.docs.map(document => ({...document.data(), id: document.id}));
+            onChange([...new Map(lists.flat().map(item => [item.id, item])).values()]);
+        }, onError)
+    );
+    return () => unsubscribes.forEach(unsubscribe => unsubscribe());
+};
+
+window.decideSessionRequest = async function (id, decision, meetingDetails = "") {
+    const user = auth.currentUser;
+    if (!isSchoolUser(user)) throw new Error("Please sign in first.");
+    if (!["accepted", "declined", "cancelled"].includes(decision)) throw new Error("Invalid session decision.");
+    meetingDetails = meetingDetails.trim();
+    return runTransaction(db, async transaction => {
+        const ref = doc(db, "sessionRequests", id);
+        const session = (await transaction.get(ref)).data();
+        if (!session || ![session.tutorUid, session.studentUid].includes(user.uid)) throw new Error("This session is not yours.");
+        if (session.startAt.toMillis() <= Date.now()) throw new Error("This session time has already passed.");
+        if (!["pending", "accepted"].includes(session.status)) throw new Error("This request has already been closed.");
+        const lockRef = doc(db, "scheduleLocks", session.tutorUid + "_" + session.startAt.toMillis());
+        const studentLockRef = doc(db, "scheduleLocks", session.studentUid + "_" + session.startAt.toMillis());
+        if (decision === "cancelled") {
+            if (session.status === "accepted") { transaction.delete(lockRef); transaction.delete(studentLockRef); }
+            transaction.update(ref, {status: decision, updatedAt: serverTimestamp(), tutorContactEmail: null, tutorContactPhone: null});
+            return;
+        }
+        if (user.uid !== session.tutorUid || session.status !== "pending") throw new Error("Only the tutor can accept or decline a pending request.");
+        if (decision === "declined") {
+            transaction.update(ref, {status: decision, updatedAt: serverTimestamp()});
+            return;
+        }
+        const tutor = (await transaction.get(doc(db, "tutors", session.tutorId))).data();
+        const application = (await transaction.get(doc(db, "tutorApplications", session.tutorId))).data();
+        const lock = await transaction.get(lockRef);
+        const studentLock = await transaction.get(studentLockRef);
+        if (lock.exists() || studentLock.exists()) throw new Error("You or the student already has a confirmed session at this time. Decline this request or agree on another time.");
+        const local = new Date(session.startAt.toMillis() - 6 * 3600000);
+        const hour = local.getUTCHours();
+        const time = (hour % 12 || 12) + ":00 " + (hour >= 12 ? "PM" : "AM");
+        if (tutor?.userId !== user.uid || !tutor.subjects.includes(session.subject)
+            || !tutor.formats.includes(session.format) || !tutor.availability?.[schoolDays[local.getUTCDay()]]?.includes(time)) {
+            throw new Error("Your profile or availability changed. You cannot accept this request.");
+        }
+        if (meetingDetails.length < 5 || meetingDetails.length > 250) throw new Error("Add meeting details in 5–250 characters before accepting.");
+        const email = application.shareSchoolEmail === true ? application.applicantEmail : null;
+        const phone = application.contactMethod === "Phone number" && application.contactConsent === true ? application.contactPhone : null;
+        transaction.set(lockRef, {requestId: id, tutorUid: user.uid, ownerUid: session.tutorUid, startAt: session.startAt});
+        transaction.set(studentLockRef, {requestId: id, tutorUid: user.uid, ownerUid: session.studentUid, startAt: session.startAt});
+        transaction.update(ref, {status: decision, meetingDetails, tutorContactEmail: email, tutorContactPhone: phone, updatedAt: serverTimestamp()});
     });
 };

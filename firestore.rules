@@ -39,12 +39,12 @@ service cloud.firestore {
           'firstName', 'lastName', 'grade', 'bio', 'subjects', 'formats',
           'rateType', 'hourlyRate', 'availability', 'maxStudents', 'contactMethod',
           'shareSchoolEmail', 'contactPhone', 'contactConsent', 'userId', 'applicantEmail', 'status',
-          'subjectStatuses', 'createdAt', 'profilePhotoURL'
+          'subjectStatuses', 'createdAt', 'updatedAt', 'profilePhotoURL'
         ])
         && data.userId == request.auth.uid
         && data.applicantEmail == request.auth.token.email.lower()
         && data.status == 'pending'
-        && data.createdAt == request.time
+        && data.createdAt is timestamp
         && data.firstName is string && data.firstName.size() > 0 && data.firstName.size() <= 50
         && data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 70
         && data.grade in ['9', '10', '11', '12']
@@ -82,31 +82,150 @@ service cloud.firestore {
       allow create: if schoolUser()
         && applicationId == request.auth.uid
         && validApplication(request.resource.data)
+        && request.resource.data.createdAt == request.time
         && !exists(/databases/$(database)/documents/mail/$(applicationId))
         && existsAfter(/databases/$(database)/documents/mail/$(applicationId));
       allow update: if reviewer() && request.resource.data.diff(resource.data)
         .affectedKeys().hasOnly([
           'status', 'subjectStatuses', 'reviewedBy', 'reviewedAt', 'removedBy', 'removedAt'
         ]);
+      allow update: if schoolUser() && resource.data.userId == request.auth.uid
+        && resource.data.status != 'removed'
+        && validApplication(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && !existsAfter(/databases/$(database)/documents/tutors/$(applicationId))
+        && existsAfter(/databases/$(database)/documents/mail/$(request.auth.uid));
     }
 
     match /tutors/{applicationId} {
       allow read: if schoolUser();
-      allow write: if reviewer();
+      allow create, update: if reviewer()
+        && request.resource.data.userId is string
+        && !request.resource.data.keys().hasAny(['contactEmail', 'contactPhone', 'contactMethod']);
+      allow delete: if reviewer() || (schoolUser()
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(applicationId)).data.userId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(applicationId)).data.status == 'pending'
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(applicationId)).data.updatedAt == request.time);
+    }
+
+
+
+    function activeSlot(data) {
+      let tutor = get(/databases/$(database)/documents/tutors/$(data.tutorId)).data;
+      let local = data.startAt - duration.value(6, 'h');
+      let day = ['Thursday', 'Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'][int(local.date().toMillis() / 86400000) % 7];
+      let hour = ['12:00 AM','1:00 AM','2:00 AM','3:00 AM','4:00 AM','5:00 AM','6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM','10:00 PM','11:00 PM'][local.hours()];
+      return tutor.userId == data.tutorUid && data.subject in tutor.subjects
+        && data.format in tutor.formats && hour in tutor.availability.get(day, [])
+        && local.minutes() == 0 && local.seconds() == 0 && local.nanos() == 0;
+    }
+    function lockId(data) { return data.tutorUid + '_' + string(data.startAt.toMillis()); }
+    function studentLockId(data) { return data.studentUid + '_' + string(data.startAt.toMillis()); }
+    function lockHeld(data, id) {
+      return getAfter(/databases/$(database)/documents/scheduleLocks/$(lockId(data))).data.requestId == id
+        && getAfter(/databases/$(database)/documents/scheduleLocks/$(studentLockId(data))).data.requestId == id;
+    }
+    function correctContacts(data) {
+      let app = get(/databases/$(database)/documents/tutorApplications/$(data.tutorId)).data;
+      return data.tutorContactEmail == (app.shareSchoolEmail == true ? app.applicantEmail : null)
+        && data.tutorContactPhone == (app.contactMethod == 'Phone number' && app.get('contactConsent', false) == true ? app.contactPhone : null);
+    }
+    match /sessionRequests/{id} {
+      allow get: if schoolUser() && (resource == null || request.auth.uid in [resource.data.studentUid, resource.data.tutorUid]);
+      allow list: if schoolUser() && request.auth.uid in [resource.data.studentUid, resource.data.tutorUid];
+      allow create: if schoolUser() && validSession(request.resource.data, id);
+      allow update: if schoolUser()
+        && request.auth.uid in [resource.data.studentUid, resource.data.tutorUid]
+        && resource.data.startAt > request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'meetingDetails', 'tutorContactEmail', 'tutorContactPhone'
+        ])
+        && (acceptSession(resource.data, request.resource.data, id)
+          || closeSession(resource.data, request.resource.data));
+    }
+    function validSession(data, id) {
+      let tutor = get(/databases/$(database)/documents/tutors/$(data.tutorId)).data;
+      return data.keys().hasOnly(['tutorId','tutorUid','studentUid','studentName','studentEmail','tutorName',
+          'subject','format','topic','startAt','status','meetingDetails','tutorContactEmail','tutorContactPhone',
+          'rateType','hourlyRate','createdAt','updatedAt'])
+        && data.studentUid == request.auth.uid && data.tutorUid != request.auth.uid
+        && data.studentEmail == request.auth.token.email.lower()
+        && data.studentName is string && data.studentName.size() > 0 && data.studentName.size() <= 120
+        && data.tutorName == tutor.firstName + ' ' + tutor.lastName
+        && data.startAt is timestamp && data.startAt > request.time && data.startAt <= request.time + duration.value(60, 'd')
+        && id == data.tutorId + '_' + string(data.startAt.toMillis()) + '_' + request.auth.uid
+        && activeSlot(data)
+        && data.topic is string && data.topic.size() >= 10 && data.topic.size() <= 500
+        && data.status == 'pending' && data.meetingDetails == ''
+        && data.tutorContactEmail == null && data.tutorContactPhone == null
+        && data.rateType == tutor.rateType && data.hourlyRate == tutor.hourlyRate
+        && data.createdAt == request.time && data.updatedAt == request.time;
+    }
+    function acceptSession(before, after, id) {
+      return request.auth.uid == before.tutorUid && before.status == 'pending' && after.status == 'accepted'
+        && activeSlot(after) && correctContacts(after)
+        && after.meetingDetails is string && after.meetingDetails.size() >= 5 && after.meetingDetails.size() <= 250
+        && !exists(/databases/$(database)/documents/scheduleLocks/$(lockId(before)))
+        && !exists(/databases/$(database)/documents/scheduleLocks/$(studentLockId(before))) && lockHeld(after, id);
+    }
+    function closeSession(before, after) {
+      return after.meetingDetails == before.meetingDetails
+        && after.tutorContactEmail == null && after.tutorContactPhone == null
+        && ((request.auth.uid == before.tutorUid && before.status == 'pending' && after.status == 'declined')
+          || (before.status in ['pending','accepted'] && after.status == 'cancelled'
+            && (before.status != 'accepted' || (!existsAfter(/databases/$(database)/documents/scheduleLocks/$(lockId(before)))
+              && !existsAfter(/databases/$(database)/documents/scheduleLocks/$(studentLockId(before)))))));
+    }
+    match /scheduleLocks/{key} {
+      // Contains only a booking reference and time, never names, contact details, or the learning topic.
+      allow get: if schoolUser();
+      allow create: if schoolUser() && validLock(request.resource.data, key);
+      allow delete: if schoolUser()
+        && request.auth.uid in [get(/databases/$(database)/documents/sessionRequests/$(resource.data.requestId)).data.studentUid, resource.data.tutorUid]
+        && get(/databases/$(database)/documents/sessionRequests/$(resource.data.requestId)).data.status == 'accepted'
+        && getAfter(/databases/$(database)/documents/sessionRequests/$(resource.data.requestId)).data.status == 'cancelled'
+        && getAfter(/databases/$(database)/documents/sessionRequests/$(resource.data.requestId)).data.updatedAt == request.time;
+    }
+    function validLock(data, key) {
+      let session = getAfter(/databases/$(database)/documents/sessionRequests/$(data.requestId)).data;
+      return data.keys().hasOnly(['requestId','tutorUid','ownerUid','startAt'])
+        && data.ownerUid in [session.tutorUid, session.studentUid]
+        && data.tutorUid == request.auth.uid && key == data.ownerUid + '_' + string(session.startAt.toMillis())
+        && data.startAt == session.startAt && data.tutorUid == session.tutorUid
+        && session.status == 'accepted' && session.updatedAt == request.time
+        && get(/databases/$(database)/documents/sessionRequests/$(data.requestId)).data.status == 'pending';
     }
 
     match /mail/{applicationId} {
-      allow create: if schoolUser()
-        && applicationId == request.auth.uid
-        && !exists(/databases/$(database)/documents/tutorApplications/$(applicationId))
-        && existsAfter(/databases/$(database)/documents/tutorApplications/$(applicationId))
+      allow create, update: if schoolUser() && applicationId == request.auth.uid
         && request.resource.data == {
           'to': reviewSettings().reviewerEmail,
           'message': {
             'subject': 'New ATS tutor application',
             'text': 'A student submitted a tutor application. Review it here: ' + reviewSettings().reviewUrl
           }
-        };
+        }
+        && (newSubmission(applicationId) || revisedSubmission(request.auth.uid));
+    }
+    match /profileEdits/{uid} {
+      allow create, update: if schoolUser() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['applicationId', 'updatedAt'])
+        && request.resource.data.applicationId is string
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(request.resource.data.applicationId)).data.userId == uid
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(request.resource.data.applicationId)).data.updatedAt == request.time;
+    }
+    function newSubmission(id) {
+      return !exists(/databases/$(database)/documents/tutorApplications/$(id))
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(id)).data.createdAt == request.time;
+    }
+    function revisedSubmission(uid) {
+      let receipt = getAfter(/databases/$(database)/documents/profileEdits/$(uid)).data;
+      return receipt.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(receipt.applicationId)).data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/tutorApplications/$(receipt.applicationId)).data.userId == uid;
     }
   }
 }

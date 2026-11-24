@@ -69,6 +69,12 @@ let pendingFeature = null;
 // Stores applications retrieved for the admin dashboard.
 let adminApplications = [];
 let adminLoadVersion = 0;
+let editingApplicationId = null;
+let mySessions = [];
+let stopWatchingSessions = null;
+let sessionWatchVersion = 0;
+let sessionsError = "";
+const busySessions = new Set();
 
 // Stores the currently authenticated ATS user.
 window.currentUser = null;
@@ -155,8 +161,10 @@ function continueToFeature() {
     }
 
     if (destination === "signup") {
-        showScreen("signup-screen");
+        startTutorRegistration();
     }
+
+    if (destination === "sessions") openMySessions();
 
     if (destination === "status") {
         loadMyApplications();
@@ -183,15 +191,20 @@ function continueToFeature() {
 
 window.handleAuthStateChanged = function(user) {
 
+    const previousUser = window.currentUser;
+    const identityChanged = previousUser?.uid !== user?.uid;
     window.currentUser = user || null;
+    if (identityChanged) resetTutorRegistration();
     updateGooglePhoto();
+    startSessionUpdates();
+    document.getElementById("my-sessions-button").classList.toggle("hidden", !user);
     document.getElementById("sign-out-button").classList.toggle("hidden", !user);
-    if (!user) {
+    if (!user || identityChanged) {
         adminApplications = [];
         adminLoadVersion++;
         for (const id of ["tutor-grid", "tutor-profile", "application-status-content",
             "admin-applications-content", "admin-tutors-content",
-            "admin-dashboard-feedback", "admin-tutors-feedback"]) {
+            "admin-dashboard-feedback", "admin-tutors-feedback", "session-list", "session-feedback"]) {
             document.getElementById(id).replaceChildren();
         }
     }
@@ -208,11 +221,14 @@ window.handleAuthStateChanged = function(user) {
         adminLink.classList.toggle("hidden", !isAdmin);
     }
 
+    if (identityChanged && previousUser && user) goHome();
+
     if (user && pendingFeature) {
         continueToFeature();
     }
 
     const protectedScreens = [
+        "sessions-screen",
         "subject-screen",
         "name-screen",
         "results-screen",
@@ -514,14 +530,6 @@ function openTutorProfile(tutor, manageTutors = false) {
             </div>
         `).join("");
 
-    let contact = "<p>This tutor hasn’t added contact details yet.</p>";
-    if (/^[^@\s]+@ats\.edu\.mx$/i.test(tutor.contactEmail || "")) {
-        const address = encodeURIComponent(tutor.contactEmail).replace("%40", "@");
-        const subject = encodeURIComponent("ATS tutoring request for " + selectedSubject);
-        contact = `<a class="button button-primary" href="mailto:${address}?subject=${subject}">Email tutor</a>`;
-    } else if (/^\+?[0-9]{7,15}$/.test(tutor.contactPhone || "")) {
-        contact = `<a class="button button-primary" href="tel:${escapeHTML(tutor.contactPhone)}">Call ${escapeHTML(tutor.contactPhone)}</a>`;
-    }
 
     profile.innerHTML = `
 
@@ -573,7 +581,7 @@ function openTutorProfile(tutor, manageTutors = false) {
                 <h3>Availability</h3>
 
                 <p>
-                    Ask the tutor to confirm a time before meeting.
+                    Choose an available time below. A request is not a confirmed session until the tutor accepts.
                 </p>
 
                 <div class="availability-list">
@@ -584,9 +592,8 @@ function openTutorProfile(tutor, manageTutors = false) {
 
             <section class="profile-section">
 
-                <h3>Contact</h3>
-
-                ${contact}
+                <h3>Request a session</h3>
+                <div id="session-request-container"></div>
 
             </section>
 
@@ -622,6 +629,7 @@ function openTutorProfile(tutor, manageTutors = false) {
         profile.querySelector("article").appendChild(controls);
     }
 
+    addSessionRequestForm(tutor);
     showScreen("profile-screen");
 }
 
@@ -741,6 +749,9 @@ function updateSignupStep() {
 */
 
 function resetTutorRegistration() {
+    editingApplicationId = null;
+    document.getElementById("profile-edit-notice")?.classList.add("hidden");
+    document.getElementById("submit-application-button").textContent = "Submit application";
 
     document.getElementById("tutor-registration-form").reset();
     updateTutorContact();
@@ -1172,7 +1183,7 @@ function updateTutorContact() {
     document.getElementById("tutor-contact-hint").textContent = method === "School email"
         ? `Your school email will be ${window.currentUser?.email || "your signed-in ATS address"}.`
         : method === "Phone number"
-            ? "Include a country code if needed. These details will be visible to signed-in ATS students."
+            ? "Include a country code if needed. These details will be shared only after you accept a student’s session request."
             : "You can apply without adding contact details.";
 }
 
@@ -1669,7 +1680,7 @@ async function submitRegistration() {
         button.disabled = true;
         button.textContent = "Submitting...";
 
-        const submitted = await window.submitTutorApplication(applicationData);
+        const submitted = await window.submitTutorApplication(applicationData, editingApplicationId);
         if (window.currentUser !== user) return;
 
         alert(submitted
@@ -1683,13 +1694,13 @@ async function submitRegistration() {
         console.error("Application submission error:", error);
 
         alert(
-            "We couldn't submit your application. Please try again."
+            error.message || "We couldn't submit your application. Please try again."
         );
 
     } finally {
 
         button.disabled = false;
-        button.textContent = "Submit application";
+        button.textContent = editingApplicationId ? "Save and send for review" : "Submit application";
 
     }
 
@@ -1798,6 +1809,17 @@ async function loadMyApplications() {
             `;
 
         }).join("");
+        applications.forEach((application, index) => {
+            if (application.status === "removed") return;
+            const button = document.createElement("button");
+            button.className = "button button-secondary";
+            button.textContent = "Edit profile / application";
+            button.addEventListener("click", () => editTutorApplication(application));
+            const note = document.createElement("p");
+            note.className = "input-hint";
+            note.textContent = "Changes need school approval. Your listing pauses while the updated profile is reviewed. Existing confirmed sessions stay on your schedule.";
+            container.children[index].append(note, button);
+        });
 
     } catch (error) {
 
@@ -1852,6 +1874,7 @@ async function loadAdminApplications(message = "") {
     showScreen("admin-dashboard-screen");
 
     try {
+        await window.prepareSchedulingProfiles();
         const applications = await window.getPendingTutorApplications();
         if (window.currentUser !== user || version !== adminLoadVersion) return;
         adminApplications = applications.filter(application => application.status === "pending");
@@ -2040,4 +2063,179 @@ async function loadExistingTutors(message = "") {
 
 if (new URLSearchParams(window.location.search).get("review") === "1") {
     requestAdminDashboard();
+}
+
+/* Scheduling and profile revisions. */
+async function startTutorRegistration() {
+    const user = window.currentUser;
+    if (!user) return;
+    try {
+        const existing = await window.getMyTutorApplications();
+        if (window.currentUser !== user) return;
+        if (existing.length) { await loadMyApplications(); return; }
+        resetTutorRegistration();
+        showScreen("signup-screen");
+    } catch (error) { alert("We couldn’t check your existing application. Please try again."); }
+}
+
+function editTutorApplication(application) {
+    resetTutorRegistration();
+    editingApplicationId = application.id;
+    for (const [id, key] of [["tutor-first-name","firstName"],["tutor-last-name","lastName"],["tutor-grade","grade"],["tutor-bio","bio"],["tutor-max-students","maxStudents"],["tutor-hourly-rate","hourlyRate"],["tutor-phone","contactPhone"]]) {
+        document.getElementById(id).value = application[key] ?? (key === "maxStudents" ? 1 : "");
+    }
+    document.getElementById("bio-character-count").textContent = application.bio.length;
+    (application.subjects || []).forEach(subject => selectedTutorSubjects.add(subject));
+    document.querySelectorAll('input[name="format"]').forEach(input => input.checked = application.formats.includes(input.value));
+    document.querySelectorAll('input[name="rateType"]').forEach(input => input.checked = input.value === application.rateType);
+    Object.entries(application.availability || {}).forEach(([day,times]) => { if (times.length) tutorAvailability[day] = new Set(times); });
+    document.getElementById("tutor-contact").value = application.contactMethod || "";
+    updateTutorContact();
+    document.getElementById("tutor-share-contact").checked = Boolean(application.contactConsent || application.shareSchoolEmail);
+    document.getElementById("tutor-use-google-photo").checked = Boolean(application.profilePhotoURL && window.getGoogleProfilePhoto?.());
+    document.getElementById("tutor-guidelines").checked = false;
+    updateGooglePhoto(); updateRateOptions(); renderTutorSubjects(); renderAvailabilityDays(); renderAvailabilityTimes(); updateAvailabilitySummary();
+    document.getElementById("submit-application-button").textContent = "Save and send for review";
+    document.getElementById("profile-edit-notice")?.classList.remove("hidden");
+    showScreen("signup-screen");
+}
+
+function schoolDate(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-CA", {timeZone:"America/Monterrey",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);
+    const part = type => parts.find(item => item.type === type).value;
+    return part("year") + "-" + part("month") + "-" + part("day");
+}
+function formatSessionTime(session) {
+    return new Intl.DateTimeFormat("en-US", {timeZone:"America/Monterrey",weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(session.startAt.toMillis()));
+}
+function addSessionRequestForm(tutor) {
+    const container = document.getElementById("session-request-container");
+    if (!tutor.userId) { container.innerHTML = "<p>Scheduling for this tutor will be available after the school reviewer updates their profile.</p>"; return; }
+    if (tutor.userId === window.currentUser.uid) { container.innerHTML = '<p>This is your profile. Open <button class="text-button" onclick="openMySessions()">My sessions</button> to review requests.</p>'; return; }
+    container.innerHTML = `<p class="input-hint">One student per booking · one hour · request up to 60 days ahead. Tutor contact details stay private until acceptance. Your school account name and email are shared privately with the tutor. Check My sessions for updates.</p>
+        <form id="session-request-form" class="booking-form">
+            <div class="booking-grid">
+                <div class="form-field"><label for="booking-subject">Subject</label><select id="booking-subject" required>${tutor.subjects.map(value => '<option>' + escapeHTML(value) + '</option>').join('')}</select></div>
+                <div class="form-field"><label for="booking-format">Format</label><select id="booking-format" required>${tutor.formats.map(value => '<option>' + escapeHTML(value) + '</option>').join('')}</select></div>
+                <div class="form-field"><label for="booking-date">Date (Tampico time)</label><input id="booking-date" type="date" required min="${schoolDate()}" max="${schoolDate(new Date(Date.now()+60*86400000))}"></div>
+                <div class="form-field"><label for="booking-time">Available start time</label><select id="booking-time" required disabled><option value="">Choose a date first</option></select></div>
+            </div>
+            <div class="form-field"><label for="booking-topic">What would you like help with?</label><textarea id="booking-topic" required minlength="10" maxlength="500" rows="3" placeholder="For example: reviewing cell division for my biology exam."></textarea></div>
+            <label class="checkbox-consent"><input id="booking-guidelines" type="checkbox" required><span>I will use this request for academic help, communicate respectfully, and meet only once the tutor accepts.</span></label>
+            <p id="booking-feedback" role="status" aria-live="polite"></p>
+            <button class="button button-primary" type="submit">Send session request</button>
+        </form>`;
+    document.getElementById("booking-subject").value = tutor.subjects.includes(selectedSubject) ? selectedSubject : tutor.subjects[0];
+    const date = document.getElementById("booking-date"), times = document.getElementById("booking-time");
+    date.addEventListener("change", () => {
+        times.replaceChildren();
+        if (!date.value) { times.disabled = true; return; }
+        const day = new Intl.DateTimeFormat("en-US",{timeZone:"America/Monterrey",weekday:"long"}).format(new Date(date.value+"T12:00:00-06:00"));
+        const available = (tutor.availability?.[day] || []).filter(time => {
+            try { return window.makeSchoolSlot(date.value,time).start > new Date(); } catch { return false; }
+        });
+        times.innerHTML = '<option value="">' + (available.length ? 'Choose a time' : 'No available times on this date') + '</option>' + available.map(time => '<option>' + escapeHTML(time) + '</option>').join('');
+        times.disabled = !available.length;
+    });
+    const form = document.getElementById("session-request-form");
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]'), feedback = document.getElementById("booking-feedback");
+        if (button.disabled) return;
+        if (!times.value) { feedback.textContent = "Choose an available time."; return; }
+        const user = window.currentUser;
+        button.disabled = true; feedback.textContent = "Sending your request…";
+        try {
+            await window.requestTutoringSession({tutorId:tutor.id,date:date.value,time:times.value,subject:document.getElementById("booking-subject").value,format:document.getElementById("booking-format").value,topic:document.getElementById("booking-topic").value});
+            if (window.currentUser !== user) return;
+            document.getElementById("session-view").value = "student";
+            openMySessions("Request sent. Wait for the tutor’s acceptance before meeting.");
+        } catch(error) { if (window.currentUser === user) feedback.textContent = error.message || "We couldn’t send your request. Please try again."; }
+        finally { button.disabled = false; }
+    });
+}
+
+function startSessionUpdates() {
+    stopWatchingSessions?.(); stopWatchingSessions = null;
+    const version = ++sessionWatchVersion;
+    mySessions = []; sessionsError = ""; busySessions.clear();
+    document.getElementById("my-sessions-button").textContent = "My sessions";
+    document.getElementById("session-feedback").textContent = "";
+    const user = window.currentUser;
+    if (!user || !window.watchMySessions) return;
+    stopWatchingSessions = window.watchMySessions(items => {
+        if (window.currentUser !== user || version !== sessionWatchVersion) return;
+        mySessions = items;
+        const pending = items.filter(item => item.tutorUid === user.uid && item.status === "pending" && item.startAt.toMillis() > Date.now()).length;
+        document.getElementById("my-sessions-button").textContent = "My sessions" + (pending ? " (" + pending + ")" : "");
+        if (document.getElementById("sessions-screen").classList.contains("active")) renderMySessions();
+    }, error => {
+        if (window.currentUser !== user || version !== sessionWatchVersion) return;
+        console.error("Session updates unavailable:", error);
+        sessionsError = "We couldn’t load session updates. Please refresh to try again.";
+        if (document.getElementById("sessions-screen").classList.contains("active")) renderMySessions();
+    });
+}
+function openMySessions(message = "") {
+    if (!window.currentUser) { pendingFeature = "sessions"; showScreen("auth-screen"); return; }
+    document.getElementById("session-feedback").textContent = message;
+    showScreen("sessions-screen"); renderMySessions();
+}
+function refreshMySessions() { startSessionUpdates(); renderMySessions(); }
+document.getElementById("session-view").addEventListener("change", renderMySessions);
+function renderMySessions() {
+    const container = document.getElementById("session-list");
+    const drafts = new Map(Array.from(container.querySelectorAll('textarea[data-session]')).map(input => [input.dataset.session,input.value]));
+    container.replaceChildren();
+    if (!window.currentUser) return;
+    if (sessionsError) { container.textContent = sessionsError; return; }
+    const asTutor = document.getElementById("session-view").value === "tutor";
+    const items = mySessions.filter(item => (asTutor ? item.tutorUid : item.studentUid) === window.currentUser.uid)
+        .sort((a,b) => a.startAt.toMillis() - b.startAt.toMillis());
+    if (!items.length) { container.innerHTML = '<div class="empty-state"><h3>No sessions yet.</h3><p>' + (asTutor ? 'Requests from students will appear here once your tutor profile is approved.' : 'Find a tutor and request an available time to get started.') + '</p></div>'; return; }
+    items.forEach(session => {
+        const future = session.startAt.toMillis() > Date.now();
+        const status = !future && session.status === "pending" ? "Expired request" : !future && session.status === "accepted" ? "Past session" : {pending:"Awaiting tutor approval",accepted:"Confirmed",declined:"Declined",cancelled:"Cancelled"}[session.status] || session.status;
+        const card = document.createElement("article"); card.className = "profile-card session-card";
+        card.innerHTML = `<div class="session-heading"><h3>${escapeHTML(session.subject)} with ${escapeHTML(asTutor ? session.studentName : session.tutorName)}</h3><span class="session-status status-${escapeHTML(session.status)}">${escapeHTML(status)}</span></div>
+            ${asTutor ? '<p class="input-hint">School account: ' + escapeHTML(session.studentEmail) + '</p>' : ''}
+            <p><strong>${escapeHTML(formatSessionTime(session))}</strong> · 1 hour · Tampico time</p>
+            <p>${escapeHTML(session.format)} · ${session.rateType === "paid" ? 'MXN ' + escapeHTML(session.hourlyRate) + ' for this hour' : 'Free tutoring'}</p>
+            <div class="session-topic"><h4>Help requested</h4><p>${escapeHTML(session.topic)}</p></div>
+            ${session.status === "accepted" ? '<h4>Meeting details</h4><p class="meeting-details">'+escapeHTML(session.meetingDetails)+'</p>' : ''}
+            <div class="session-controls"></div><p class="session-action-feedback" role="status" aria-live="polite"></p>`;
+        const controls = card.querySelector('.session-controls');
+        if (session.status === "accepted") {
+            const contact = document.createElement('p');
+            contact.textContent = asTutor ? "Student school email: " + session.studentEmail : session.tutorContactEmail ? "Tutor email: " + session.tutorContactEmail : session.tutorContactPhone ? "Tutor phone: " + session.tutorContactPhone : "The tutor has not shared contact details. Use the meeting details above.";
+            controls.appendChild(contact);
+            const calendar = document.createElement('button'); calendar.className = 'button button-secondary'; calendar.textContent = 'Add to calendar'; calendar.onclick = () => downloadSessionCalendar(session); controls.appendChild(calendar);
+        }
+        function action(label, decision, details = () => "") {
+            const button = document.createElement('button'); button.type = 'button'; button.className = 'button ' + (decision === 'accepted' ? 'button-approve' : 'button-secondary'); button.textContent = label; button.disabled = busySessions.has(session.id);
+            button.addEventListener('click', async () => {
+                if (busySessions.has(session.id)) return;
+                if (decision === 'cancelled' && !window.confirm('Cancel this session request? The other student will see the cancellation in My sessions.')) return;
+                const detail = details(); if (decision === 'accepted' && (detail.trim().length < 5 || detail.length > 250)) { card.querySelector('.session-action-feedback').textContent = 'Add meeting details in 5–250 characters.'; return; }
+                busySessions.add(session.id); controls.querySelectorAll('button').forEach(item => item.disabled = true);
+                const user = window.currentUser;
+                try { await window.decideSessionRequest(session.id, decision, detail); if (window.currentUser === user) document.getElementById('session-feedback').textContent = 'Session ' + decision + '.'; }
+                catch(error) { if (window.currentUser === user) document.getElementById('session-feedback').textContent = error.message || 'Couldn’t save this decision. Please try again.'; }
+                finally { busySessions.delete(session.id); if (window.currentUser === user && document.getElementById('sessions-screen').classList.contains('active')) renderMySessions(); }
+            }); controls.appendChild(button);
+        }
+        if (future && session.status === 'pending' && asTutor) {
+            const label = document.createElement('label'); label.textContent = 'Meeting place or online meeting link'; label.htmlFor = 'meeting-' + session.id;
+            const input = document.createElement('textarea'); input.id = label.htmlFor; input.dataset.session = session.id; input.maxLength = 250; input.rows = 2; input.placeholder = session.format === 'Online' ? 'Add an online meeting link and instructions.' : 'Choose an appropriate school meeting location.'; input.value = drafts.get(session.id) || '';
+            controls.append(label,input); action('Accept request','accepted',()=>input.value); action('Decline request','declined');
+        }
+        if (future && ['pending','accepted'].includes(session.status)) action('Cancel ' + (session.status === 'accepted' ? 'session' : 'request'),'cancelled');
+        container.appendChild(card);
+    });
+}
+function downloadSessionCalendar(session) {
+    const stamp = value => new Date(value).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+    const clean = value => String(value).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,match=>'\\'+match);
+    const body = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ATS Tutoring//Sessions//EN','BEGIN:VEVENT','UID:'+session.id+'@ats-tutoring','DTSTAMP:'+stamp(Date.now()),'DTSTART:'+stamp(session.startAt.toMillis()),'DTEND:'+stamp(session.startAt.toMillis()+3600000),'SUMMARY:'+clean('ATS Tutoring: '+session.subject),'DESCRIPTION:'+clean('Tutor: '+session.tutorName+'; Student: '+session.studentName),'LOCATION:'+clean(session.meetingDetails),'END:VEVENT','END:VCALENDAR',''].join('\r\n');
+    const link = document.createElement('a'), url = URL.createObjectURL(new Blob([body],{type:'text/calendar;charset=utf-8'})); link.href = url; link.download = 'ats-tutoring-session.ics'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

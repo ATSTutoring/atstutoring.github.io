@@ -2752,3 +2752,43 @@ footer { border-top: 3px solid var(--navy); background: var(--blue-light); }
 .visual-card-main { grid-row: 2; }
 .floating-card-bottom { grid-row: 3; justify-self: start; }
 .visual-illustration { height: 165px; }
+
+/* Private session requests and schedules. */
+.header-actions { display: flex; align-items: center; gap: 22px; }
+.sessions-container { width: min(100% - 48px, 1050px); }
+.sessions-container .step-label { margin-top: 32px; }
+.sessions-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 28px 0; }
+.sessions-toolbar select { flex: 1; min-width: 210px; }
+.booking-form { margin-top: 22px; }
+.booking-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0 20px; }
+.booking-form label, .session-controls label { display: block; font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.booking-form input:not([type="checkbox"]), .booking-form select, .booking-form textarea, .sessions-toolbar select, .session-controls textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 13px; background: white; color: var(--text); font-size: 16px;
+}
+.booking-form .checkbox-consent { display: flex; align-items: flex-start; gap: 12px; font-weight: 400; }
+.booking-form [role="status"], #session-feedback { margin: 18px 0; color: var(--navy); }
+.session-list { display: grid; gap: 24px; }
+.session-card { padding: 28px; border-top: 4px solid var(--navy); }
+.session-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.session-heading h3 { color: var(--navy); font-size: 22px; }
+.session-card p { line-height: 1.7; overflow-wrap: anywhere; }
+.session-status { border-radius: 8px; padding: 7px 12px; background: #fff3d9; color: #795510; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.status-accepted { color: #1a643a; background: #e6f4eb; }
+.status-declined, .status-cancelled { color: #87323e; background: #fbecef; }
+.session-topic { background: var(--blue-light); padding: 18px; border-radius: 10px; margin: 20px 0; }
+.session-controls { margin-top: 20px; }
+.session-controls .button { margin: 12px 12px 0 0; }
+.session-controls textarea { display: block; margin-bottom: 6px; }
+.session-controls p { margin-bottom: 8px; }
+.meeting-details { white-space: pre-wrap; }
+.session-action-feedback { margin-top: 12px; color: var(--red-dark); }
+@media (max-width: 600px) {
+    .header-actions { gap: 12px; }
+    .navbar { padding-inline: 4%; }
+    .brand { gap: 6px; }
+    .brand-logo { width: 44px; height: 44px; }
+    .booking-grid { grid-template-columns: 1fr; }
+    .session-heading { flex-direction: column; }
+    .session-card { padding: 22px 18px; }
+}
+@media (max-width: 360px) { .brand span { max-width: 65px; } .header-actions { gap: 8px; } }
