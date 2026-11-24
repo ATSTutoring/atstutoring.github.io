@@ -60,3 +60,13 @@ The existing five-minute Apps Script handler now checks both `mail` and `support
 **Profile** in the header opens the student's own tutor application and edit option, or an invitation to sign up. **My Sessions** opens their schedule. The prominent blue **Review tutor applications** button appears only when the signed-in school email matches `settings/review.reviewerEmail`. Firestore also enforces reviewer access; hiding the button is not the security boundary. Change `reviewerEmail` when the vice principal takes over, and keep `supportEmail` set independently if reports should still go to the website coordinator.
 
 Run `node tests/scheduling.test.cjs` and `node tests/notifier.test.cjs` for backend, privacy-field, quota and sender regression checks.
+
+## Homepage visual refinements
+
+- Sign out uses the same 42px header height and vertical alignment as the other account buttons.
+- Find a Tutor and Sign Up as a Tutor use the same 17px label size as the reviewer button.
+- Your Next Step includes a small original inline SVG book illustration in school colors, alongside the mathematics symbols. The decorative illustration is hidden from assistive technology, and card animation respects reduced-motion preferences. No image-storage service or new dependency is needed.
+
+## School-named address
+
+On November 24, 2026, the existing public repository was transferred to `ATSTutoring/atstutoring.github.io`, preserving source history. The live website is https://atstutoring.github.io/ and Pages publishes from `main`, root. The organization uses GitHub Free and the dedicated website Gmail for notices; no collaborators were invited. Firebase remains in the existing project. Its authorized domains include `atstutoring.github.io`, and `settings/review.reviewUrl` is `https://atstutoring.github.io/?review=1`. School-account sign-in and profile access were verified at the new address. The existing sender reads this reviewer URL dynamically; a fresh application email was not sent during migration. Replace previously shared website links: GitHub Pages URLs at the previous owner are not automatically redirected after repository transfer.
