@@ -11,7 +11,7 @@
         content="Find academic support and connect with student tutors in the ATS community."
     >
 
-    <link rel="stylesheet" href="style.css?v=20261124-subjects">
+    <link rel="stylesheet" href="style.css?v=20261124-color-help">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,8 +34,9 @@
     <span>ATS <strong>Tutoring</strong></span>
 </a>
 
-        <div class="header-actions"><button id="my-sessions-button" type="button" class="text-button hidden" onclick="openMySessions()">My sessions</button>
-        <button id="sign-out-button" type="button" class="text-button hidden" onclick="signOutUser()">Sign out</button></div>
+        <nav class="header-actions" aria-label="Your account"><button id="profile-nav-button" type="button" class="header-button" onclick="requestApplicationStatus()">Profile</button>
+        <button id="my-sessions-button" type="button" class="header-button hidden" onclick="openMySessions()">My Sessions</button>
+        <button id="sign-out-button" type="button" class="text-button hidden" onclick="signOutUser()">Sign out</button></nav>
     </header>
 
     <main id="app">
@@ -80,18 +81,11 @@
                     </button>
 
                     <button
-                        class="text-button"
-                        onclick="requestApplicationStatus()"
-                    >
-                    My tutor profile & application
-                    </button>
-
-                    <button
                         id="admin-dashboard-link"
-                        class="text-button hidden"
+                        class="button admin-launch hidden"
                         onclick="requestAdminDashboard()"
                     >
-    Admin dashboard →
+    Review tutor applications
 </button>
 
                 </div>
@@ -171,12 +165,12 @@
 
     <div class="form-container">
 
-        <div class="step-label">TUTOR APPLICATION</div>
+        <div class="step-label">YOUR ATS TUTOR PROFILE</div>
 
-        <h2>Your application status</h2>
+        <h2>Your tutor profile</h2>
 
         <p class="section-description">
-            Keep track of your tutor application and its approval progress.
+            View your application, check its approval, and edit your tutor details.
         </p>
 
         <div id="application-status-content">
@@ -301,7 +295,7 @@
                 ← Back to home
             </button>
 
-            <div class="form-container">
+            <div class="form-container"><div class="search-progress" aria-label="Tutor search: step 1 of 3, Choose a subject"><div class="search-progress-label"><span>FIND YOUR TUTOR</span><span>1 of 3 · Choose a subject</span></div><div class="search-progress-track"><span style="width:33.333%"></span></div></div>
 
                 <div class="step-label">LET'S GET STARTED · 01</div>
 
@@ -347,7 +341,7 @@
                 ← Back to subjects
             </button>
 
-            <div class="form-container">
+            <div class="form-container"><div class="search-progress" aria-label="Tutor search: step 2 of 3, Introduce yourself"><div class="search-progress-label"><span>FIND YOUR TUTOR</span><span>2 of 3 · Introduce yourself</span></div><div class="search-progress-track"><span style="width:66.667%"></span></div></div>
 
                 <div class="step-label">ALMOST THERE · 02</div>
 
@@ -393,7 +387,7 @@
                 ← Back
             </button>
 
-            <div class="results-heading">
+            <div class="search-progress" aria-label="Tutor search: step 3 of 3, Explore your matches"><div class="search-progress-label"><span>FIND YOUR TUTOR</span><span>3 of 3 · Explore your matches</span></div><div class="search-progress-track"><span style="width:100%"></span></div></div><div class="results-heading">
 
                 <div class="step-label">YOUR MATCHES · 03</div>
 
@@ -1139,7 +1133,7 @@
         <div class="form-container sessions-container">
             <button class="text-button" onclick="goHome()">Back to home</button>
             <p class="step-label">ATS TUTORING · YOUR SCHEDULE</p>
-            <h2>My sessions</h2>
+            <h2>My Sessions</h2>
             <p class="section-description">Requests become confirmed only when the tutor accepts. All times are Tampico school time (UTC−06:00). Sessions last one hour.</p>
             <div class="sessions-toolbar">
                 <label for="session-view">Show</label>
@@ -1153,12 +1147,24 @@
     </main>
 
     <footer class="footer">
+        <button type="button" class="help-launch" onclick="openHelpDialog()"><span aria-hidden="true">?</span> Help / Report an issue</button>
         <span>ATS TUTORING</span>
         <span>Supporting our community, one student at a time.</span>
     </footer>
 
-    <script type="module" src="firebase.js?v=20261124-subjects"></script>
-    <script src="script.js?v=20261124-subjects"></script>
+    <dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-privacy">
+        <div class="help-dialog-heading"><div><p class="step-label">WE’RE HERE TO HELP</p><h2 id="help-title">Help / Report an issue</h2></div><button type="button" class="help-close" onclick="closeHelpDialog()" aria-label="Close help form">×</button></div>
+        <p id="help-privacy">Report emails don’t include your name or email. A private account-linked record limits spam, so this isn’t fully anonymous. Avoid identifying details in your message.</p>
+        <form id="help-report-form">
+            <div class="form-field"><label for="help-category">What can we help with?</label><select id="help-category" required><option value="">Choose a category</option><option>Website problem</option><option>Tutoring concern</option><option>Suggestion</option><option>General help</option></select></div>
+            <div class="form-field"><label for="help-message">Your message</label><textarea id="help-message" required minlength="10" maxlength="2000" rows="4" placeholder="Tell us what happened or what you would like improved. Please do not include passwords or private account information."></textarea><p class="input-hint">10–2,000 characters. We can’t reply personally unless you choose to include contact details in your message.</p></div>
+            <p id="help-auth-hint" class="input-hint"></p><p id="help-feedback" role="status" aria-live="polite"></p>
+            <div class="help-actions"><button id="help-signin" type="button" class="button button-secondary hidden" onclick="signInWithGoogle()">Sign in with your ATS account</button><button id="help-submit" type="submit" class="button button-blue">Send report</button></div>
+        </form>
+    </dialog>
+
+    <script type="module" src="firebase.js?v=20261124-color-help"></script>
+    <script src="script.js?v=20261124-color-help"></script>
 
 </body>
 </html>

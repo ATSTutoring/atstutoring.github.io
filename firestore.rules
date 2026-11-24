@@ -227,5 +227,31 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/tutorApplications/$(receipt.applicationId)).data.updatedAt == request.time
         && getAfter(/databases/$(database)/documents/tutorApplications/$(receipt.applicationId)).data.userId == uid;
     }
+
+    function validSupportLimit(uid, reportId) {
+      let path = /databases/$(database)/documents/supportLimits/$(uid);
+      let previous = exists(path) ? get(path).data : {'day': request.time.date(), 'count': 0};
+      let next = getAfter(path).data;
+      return next.keys().hasOnly(['day','count','reportId'])
+        && next.day == request.time.date() && next.count is int && next.count <= 3
+        && next.count == (previous.day == request.time.date() ? previous.count + 1 : 1)
+        && next.reportId == reportId && reportId is string && reportId.matches('[a-zA-Z0-9]{20}');
+    }
+    match /supportLimits/{uid} {
+      allow get: if schoolUser() && uid == request.auth.uid;
+      allow create, update: if schoolUser() && uid == request.auth.uid
+        && validSupportLimit(uid, request.resource.data.reportId)
+        && getAfter(/databases/$(database)/documents/supportReports/$(request.resource.data.reportId)).data.createdAt == request.time;
+    }
+    match /supportReports/{reportId} {
+      allow create: if schoolUser()
+        && request.resource.data.keys().hasOnly(['category','message','createdAt'])
+        && request.resource.data.category in ['Website problem','Tutoring concern','Suggestion','General help']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10 && request.resource.data.message.size() <= 2000
+        && request.resource.data.createdAt == request.time
+        && validSupportLimit(request.auth.uid, reportId);
+      // Reports are accessible only to the private email sender through its existing IAM role.
+    }
   }
 }

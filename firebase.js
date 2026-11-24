@@ -423,3 +423,22 @@ window.decideSessionRequest = async function (id, decision, meetingDetails = "")
         transaction.update(ref, {status: decision, meetingDetails, tutorContactEmail: email, tutorContactPhone: phone, updatedAt: serverTimestamp()});
     });
 };
+
+// Reports contain no identity fields; a private counter links the latest submission for spam control.
+window.submitHelpReport = async function (category, message) {
+    const user = auth.currentUser;
+    if (!isSchoolUser(user)) throw new Error("Sign in with your ATS school account to send a report.");
+    message = (message || "").trim();
+    if (!["Website problem", "Tutoring concern", "Suggestion", "General help"].includes(category)) throw new Error("Choose a report category.");
+    if (message.length < 10 || message.length > 2000) throw new Error("Write a message between 10 and 2,000 characters.");
+    const limitRef = doc(db, "supportLimits", user.uid);
+    const reportRef = doc(collection(db, "supportReports"));
+    const day = Timestamp.fromDate(new Date(Math.floor(Date.now() / 86400000) * 86400000));
+    return runTransaction(db, async transaction => {
+        const previous = (await transaction.get(limitRef)).data();
+        const count = previous?.day?.toMillis() === day.toMillis() ? previous.count : 0;
+        if (count >= 3) throw new Error("You’ve reached today’s 3-report limit. Please try again tomorrow.");
+        transaction.set(limitRef, {day, count: count + 1, reportId: reportRef.id});
+        transaction.set(reportRef, {category, message, createdAt: serverTimestamp()});
+    });
+};

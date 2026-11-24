@@ -48,3 +48,15 @@ Tutors use **My tutor profile & application → Edit profile / application**. Sa
 Deploy `firestore.rules` before publishing matching frontend files. The new collections are `sessionRequests`, `scheduleLocks` and private `profileEdits` receipts (used to bind legacy application IDs to review notification writes). No paid Firebase services or new packages are used.
 
 Run the isolated backend checks with `node tests/scheduling.test.cjs`. These execute the actual Firebase module against an in-memory transaction adapter and never write real Firebase data. They cover participant ownership, private contacts, revisions, removal restrictions, validation, midnight/timezone behavior, duplicate requests, competing acceptances, student and tutor conflicts, cancellation and listener cleanup. Browser fixture checks and rules compilation complement these checks; a two-school-account production smoke test is still recommended before rollout.
+
+## Help reports and reviewer access
+
+The shared footer opens **Help / Report an issue** on every screen. School Google sign-in is required to send. Reports contain only a category, message and submission time; report emails do not include the sender's account name/email. This is **not full anonymity**: `supportLimits/{uid}` is a private spam-control record linking the latest report to its account, and messages can themselves contain identifying details. The form explains this before submission.
+
+Each account can send up to three reports per UTC day. Firestore transactions and rules bind each report to one counter increment, so a batch cannot submit multiple reports using a single quota increment. Students cannot read queued reports or other users' counters.
+
+The existing five-minute Apps Script handler now checks both `mail` and `supportReports`, preserving acknowledgement/retry behavior. It validates the report format, emails its text to `settings/review.supportEmail` (falling back to `reviewerEmail`), then removes the queued report after sending. It uses the existing scopes and IAM role; no paid service or new email permission is needed. Application and report emails share the sender account's daily MailApp quota; unsent messages remain queued when quota is exhausted.
+
+**Profile** in the header opens the student's own tutor application and edit option, or an invitation to sign up. **My Sessions** opens their schedule. The prominent blue **Review tutor applications** button appears only when the signed-in school email matches `settings/review.reviewerEmail`. Firestore also enforces reviewer access; hiding the button is not the security boundary. Change `reviewerEmail` when the vice principal takes over, and keep `supportEmail` set independently if reports should still go to the website coordinator.
+
+Run `node tests/scheduling.test.cjs` and `node tests/notifier.test.cjs` for backend, privacy-field, quota and sender regression checks.

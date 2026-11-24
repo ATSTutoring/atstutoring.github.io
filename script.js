@@ -237,6 +237,8 @@ window.handleAuthStateChanged = function(user) {
     window.currentUser = user || null;
     if (identityChanged) resetTutorRegistration();
     updateGooglePhoto();
+    updateHelpAuth();
+    if (identityChanged && previousUser) { document.getElementById("help-report-form").reset(); document.getElementById("help-feedback").textContent = ""; }
     startSessionUpdates();
     document.getElementById("my-sessions-button").classList.toggle("hidden", !user);
     document.getElementById("sign-out-button").classList.toggle("hidden", !user);
@@ -1783,10 +1785,11 @@ async function loadMyApplications() {
 
             container.innerHTML = `
                 <div class="empty-state">
-                    <h3>No applications found.</h3>
+                    <h3>You don’t have a tutor profile yet.</h3>
                     <p>
-                        You haven't submitted a tutor application yet.
+                        Interested in being a tutor? Use your knowledge to help others!
                     </p>
+                    <button type="button" class="button button-primary" onclick="requestFeature('signup')">Sign up as a tutor</button>
                 </div>
             `;
 
@@ -2152,8 +2155,8 @@ function formatSessionTime(session) {
 function addSessionRequestForm(tutor) {
     const container = document.getElementById("session-request-container");
     if (!tutor.userId) { container.innerHTML = "<p>Scheduling for this tutor will be available after the school reviewer updates their profile.</p>"; return; }
-    if (tutor.userId === window.currentUser.uid) { container.innerHTML = '<p>This is your profile. Open <button class="text-button" onclick="openMySessions()">My sessions</button> to review requests.</p>'; return; }
-    container.innerHTML = `<p class="input-hint">One student per booking · one hour · request up to 60 days ahead. Tutor contact details stay private until acceptance. Your school account name and email are shared privately with the tutor. Check My sessions for updates.</p>
+    if (tutor.userId === window.currentUser.uid) { container.innerHTML = '<p>This is your profile. Open <button class="text-button" onclick="openMySessions()">My Sessions</button> to review requests.</p>'; return; }
+    container.innerHTML = `<p class="input-hint">One student per booking · one hour · request up to 60 days ahead. Tutor contact details stay private until acceptance. Your school account name and email are shared privately with the tutor. Check My Sessions for updates.</p>
         <form id="session-request-form" class="booking-form">
             <div class="booking-grid">
                 <div class="form-field"><label for="booking-subject">Subject</label><select id="booking-subject" required>${tutor.subjects.map(value => '<option value="' + escapeHTML(value) + '">' + escapeHTML(subjectLabel(value)) + '</option>').join('')}</select></div>
@@ -2200,7 +2203,7 @@ function startSessionUpdates() {
     stopWatchingSessions?.(); stopWatchingSessions = null;
     const version = ++sessionWatchVersion;
     mySessions = []; sessionsError = ""; busySessions.clear();
-    document.getElementById("my-sessions-button").textContent = "My sessions";
+    document.getElementById("my-sessions-button").textContent = "My Sessions";
     document.getElementById("session-feedback").textContent = "";
     const user = window.currentUser;
     if (!user || !window.watchMySessions) return;
@@ -2208,7 +2211,7 @@ function startSessionUpdates() {
         if (window.currentUser !== user || version !== sessionWatchVersion) return;
         mySessions = items;
         const pending = items.filter(item => item.tutorUid === user.uid && item.status === "pending" && item.startAt.toMillis() > Date.now()).length;
-        document.getElementById("my-sessions-button").textContent = "My sessions" + (pending ? " (" + pending + ")" : "");
+        document.getElementById("my-sessions-button").textContent = "My Sessions" + (pending ? " (" + pending + ")" : "");
         if (document.getElementById("sessions-screen").classList.contains("active")) renderMySessions();
     }, error => {
         if (window.currentUser !== user || version !== sessionWatchVersion) return;
@@ -2256,7 +2259,7 @@ function renderMySessions() {
             const button = document.createElement('button'); button.type = 'button'; button.className = 'button ' + (decision === 'accepted' ? 'button-approve' : 'button-secondary'); button.textContent = label; button.disabled = busySessions.has(session.id);
             button.addEventListener('click', async () => {
                 if (busySessions.has(session.id)) return;
-                if (decision === 'cancelled' && !window.confirm('Cancel this session request? The other student will see the cancellation in My sessions.')) return;
+                if (decision === 'cancelled' && !window.confirm('Cancel this session request? The other student will see the cancellation in My Sessions.')) return;
                 const detail = details(); if (decision === 'accepted' && (detail.trim().length < 5 || detail.length > 250)) { card.querySelector('.session-action-feedback').textContent = 'Add meeting details in 5–250 characters.'; return; }
                 busySessions.add(session.id); controls.querySelectorAll('button').forEach(item => item.disabled = true);
                 const user = window.currentUser;
@@ -2280,3 +2283,33 @@ function downloadSessionCalendar(session) {
     const body = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ATS Tutoring//Sessions//EN','BEGIN:VEVENT','UID:'+session.id+'@ats-tutoring','DTSTAMP:'+stamp(Date.now()),'DTSTART:'+stamp(session.startAt.toMillis()),'DTEND:'+stamp(session.startAt.toMillis()+3600000),'SUMMARY:'+clean('ATS Tutoring: '+session.subject),'DESCRIPTION:'+clean('Tutor: '+session.tutorName+'; Student: '+session.studentName),'LOCATION:'+clean(session.meetingDetails),'END:VEVENT','END:VCALENDAR',''].join('\r\n');
     const link = document.createElement('a'), url = URL.createObjectURL(new Blob([body],{type:'text/calendar;charset=utf-8'})); link.href = url; link.download = 'ats-tutoring-session.ics'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
+// Help is available from every screen; reports contain no automatic account identifiers.
+let reportSending = false;
+function updateHelpAuth() {
+    const signedIn = Boolean(window.currentUser);
+    document.getElementById("help-signin").classList.toggle("hidden", signedIn);
+    document.getElementById("help-submit").disabled = !signedIn || reportSending;
+    document.getElementById("help-auth-hint").textContent = signedIn
+        ? "Reports are emailed to the website coordinator. Limit: 3 reports per day."
+        : "Sign in with your ATS account to send a report. Your name and email will not be included in the report email.";
+}
+function openHelpDialog() { updateHelpAuth(); document.getElementById("help-dialog").showModal(); }
+function closeHelpDialog() { document.getElementById("help-dialog").close(); }
+document.getElementById("help-report-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (reportSending || !window.currentUser) return;
+    const user = window.currentUser;
+    const feedback = document.getElementById("help-feedback");
+    reportSending = true; updateHelpAuth(); feedback.textContent = "Sending your report…";
+    try {
+        await window.submitHelpReport(document.getElementById("help-category").value, document.getElementById("help-message").value);
+        if (window.currentUser !== user) return;
+        document.getElementById("help-report-form").reset();
+        feedback.textContent = "Thank you. Your report is queued for email delivery to the website coordinator, usually within a few minutes.";
+    } catch (error) {
+        if (window.currentUser === user) feedback.textContent = error.code === "permission-denied"
+            ? "We couldn’t send this report. You may have reached today’s 3-report limit. Please try again later."
+            : error.message || "We couldn’t send the report. Please try again.";
+    } finally { reportSending = false; updateHelpAuth(); }
+});
