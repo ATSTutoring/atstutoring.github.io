@@ -2866,5 +2866,16 @@ main > .screen:not(#home-screen) {
     .search-progress-label { font-size: 14px; }
 }
 #help-message { min-height: 120px; resize: vertical; }
+.visual-card-main { padding: 28px; }
+.visual-card-main .visual-illustration { height: 230px; }
+.visual-card-main .book-illustration { width: 210px; height: 184px; }
+.visual-card-main .orbit-one { width: 225px; height: 225px; }
+.visual-card-main .orbit-two { width: 175px; height: 175px; }
+.visual-card-main h3 { margin-top: 12px; font-size: 26px; line-height: 1.3; }
+.visual-card-main > p { margin-top: 14px; font-size: 17px; line-height: 1.7; }
+.visual-card-main .floating-symbol { width: 44px; height: 44px; font-size: 22px; }
+.visual-card-main .symbol-one { top: 24px; left: 0; }
+.visual-card-main .symbol-two { top: 28px; right: 0; }
+.visual-card-main .symbol-three { bottom: 20px; right: 0; }
 /* Keep the close control available while a short screen scrolls the help form. */
 .help-dialog-heading { position: sticky; top: 0; z-index: 1; background: #fff; padding-bottom: 12px; }
